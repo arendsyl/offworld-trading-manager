@@ -1,0 +1,167 @@
+{
+  "systems": {
+    "Sol": {
+      "name": "Sol",
+      "coordinates": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "star_type": "yellow_dwarf",
+      "planets": [
+        {
+          "id": "Sol-1",
+          "name": "Mercury",
+          "position": 1,
+          "distance_ua": 0.39,
+          "planet_type": {
+            "category": "telluric",
+            "climate": "desert"
+          },
+          "status": "uninhabited"
+        },
+        {
+          "id": "Sol-2",
+          "name": "Venus",
+          "position": 2,
+          "distance_ua": 0.72,
+          "planet_type": {
+            "category": "telluric",
+            "climate": "volcanic"
+          },
+          "status": "uninhabited"
+        },
+        {
+          "id": "Sol-3",
+          "name": "Earth",
+          "position": 3,
+          "distance_ua": 1.0,
+          "planet_type": {
+            "category": "telluric",
+            "climate": "temperate"
+          },
+          "status": "connected",
+          "settlement": {
+            "name": "New Geneva",
+            "population": 12000000000,
+            "economy": {
+              "credits": 0,
+              "tax_rate": 0.0
+            }
+          },
+          "station": {
+            "name": "Geneva Orbital",
+            "owner_id": "earth-gov",
+            "inventory": {},
+            "mass_driver": {
+              "max_channels": 4
+            }
+          },
+          "space_elevator": {
+            "warehouse": {
+              "owner_id": "earth-gov",
+              "inventory": {
+                "iron_ore": 1000,
+                "copper_ore": 500,
+                "food": 2000,
+                "water": 5000
+              }
+            },
+            "config": {
+              "cabin_count": 3,
+              "cabin_capacity": 1000,
+              "transfer_duration_secs": 5,
+              "failure_rate": 0.1,
+              "repair_duration_secs": 30
+            }
+          }
+        },
+        {
+          "id": "Sol-4",
+          "name": "Mars",
+          "position": 4,
+          "distance_ua": 1.52,
+          "planet_type": {
+            "category": "telluric",
+            "climate": "arid"
+          },
+          "status": "settled",
+          "settlement": {
+            "name": "Olympus City",
+            "population": 2500000,
+            "economy": {
+              "credits": 0,
+              "tax_rate": 0.0
+            }
+          }
+        },
+        {
+          "id": "Sol-5",
+          "name": "Jupiter",
+          "position": 5,
+          "distance_ua": 5.2,
+          "planet_type": {
+            "category": "gas_giant",
+            "gas_type": "jovian"
+          },
+          "status": "uninhabited"
+        },
+        {
+          "id": "Sol-6",
+          "name": "Saturn",
+          "position": 6,
+          "distance_ua": 9.58,
+          "planet_type": {
+            "category": "gas_giant",
+            "gas_type": "saturnian"
+          },
+          "status": "uninhabited"
+        }
+      ]
+    },
+    "Proxima Centauri": {
+      "name": "Proxima Centauri",
+      "coordinates": {
+        "x": 4.24,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "star_type": "red_dwarf",
+      "planets": [
+        {
+          "id": "Proxima Centauri-1",
+          "name": "Proxima b",
+          "position": 1,
+          "distance_ua": 0.05,
+          "planet_type": {
+            "category": "telluric",
+            "climate": "arctic"
+          },
+          "status": "uninhabited"
+        }
+      ]
+    },
+    "Sirius": {
+      "name": "Sirius",
+      "coordinates": {
+        "x": 8.6,
+        "y": 2.0,
+        "z": -1.0
+      },
+      "star_type": "binary_system",
+      "planets": [
+        {
+          "id": "Sirius-1",
+          "name": "Sirius Prime",
+          "position": 1,
+          "distance_ua": 2.5,
+          "planet_type": {
+            "category": "gas_giant",
+            "gas_type": "hot_jupiter"
+          },
+          "status": "uninhabited"
+        }
+      ]
+    }
+  }
+}

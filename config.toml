@@ -1,0 +1,22 @@
+# Offworld Trading Manager Configuration
+
+# Server port (default: 3000, can also be set via PORT env var or --port CLI flag)
+port = 3000
+
+# Path to seed data file (can also be set via --seed CLI flag)
+# seed = "seed.json"
+
+# Pulsar configuration for mass driver streaming
+[pulsar]
+url = "pulsar://localhost:6650"
+tenant = "public"
+namespace = "default"
+
+# Mass driver defaults
+[mass_driver]
+# Max concurrent active connections per station
+default_channels = 4
+# Maximum units per packet
+max_packet_size = 20
+# Latency multiplier: seconds per AU of distance between planets
+au_to_seconds = 2.0
