@@ -66,6 +66,74 @@ impl Default for MassDriverDefaults {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShipConfig {
+    #[serde(default = "default_ship_au_to_seconds")]
+    pub au_to_seconds: f64,
+    #[serde(default = "default_seconds_per_unit")]
+    pub seconds_per_unit: f64,
+    #[serde(default = "default_webhook_timeout_secs")]
+    pub webhook_timeout_secs: u64,
+}
+
+fn default_ship_au_to_seconds() -> f64 {
+    2.0
+}
+
+fn default_seconds_per_unit() -> f64 {
+    0.1
+}
+
+fn default_webhook_timeout_secs() -> u64 {
+    5
+}
+
+impl Default for ShipConfig {
+    fn default() -> Self {
+        Self {
+            au_to_seconds: default_ship_au_to_seconds(),
+            seconds_per_unit: default_seconds_per_unit(),
+            webhook_timeout_secs: default_webhook_timeout_secs(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MarketConfig {
+    #[serde(default = "default_trade_channel_capacity")]
+    pub trade_channel_capacity: usize,
+}
+
+fn default_admin_token() -> String {
+    "admin-secret-token".to_string()
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdminConfig {
+    #[serde(default = "default_admin_token")]
+    pub token: String,
+}
+
+impl Default for AdminConfig {
+    fn default() -> Self {
+        Self {
+            token: default_admin_token(),
+        }
+    }
+}
+
+fn default_trade_channel_capacity() -> usize {
+    1024
+}
+
+impl Default for MarketConfig {
+    fn default() -> Self {
+        Self {
+            trade_channel_capacity: default_trade_channel_capacity(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
     #[serde(default = "default_port")]
     pub port: u16,
@@ -76,6 +144,12 @@ pub struct AppConfig {
     pub pulsar: PulsarConfig,
     #[serde(default)]
     pub mass_driver: MassDriverDefaults,
+    #[serde(default)]
+    pub ship: ShipConfig,
+    #[serde(default)]
+    pub market: MarketConfig,
+    #[serde(default)]
+    pub admin: AdminConfig,
 }
 
 fn default_port() -> u16 {
@@ -90,6 +164,9 @@ impl Default for AppConfig {
             seed: None,
             pulsar: PulsarConfig::default(),
             mass_driver: MassDriverDefaults::default(),
+            ship: ShipConfig::default(),
+            market: MarketConfig::default(),
+            admin: AdminConfig::default(),
         }
     }
 }
@@ -117,6 +194,9 @@ pub fn load_config(
     }
     if let Ok(url) = std::env::var("PULSAR_URL") {
         config.pulsar.url = url;
+    }
+    if let Ok(token) = std::env::var("ADMIN_TOKEN") {
+        config.admin.token = token;
     }
 
     // CLI overrides

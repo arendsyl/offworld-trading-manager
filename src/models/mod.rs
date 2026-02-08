@@ -5,6 +5,9 @@ mod space_elevator;
 mod planet;
 mod system;
 mod mass_driver;
+mod player;
+mod ship;
+mod market;
 
 pub use settlement::*;
 pub use station::*;
@@ -13,3 +16,6 @@ pub use space_elevator::*;
 pub use planet::*;
 pub use system::*;
 pub use mass_driver::*;
+pub use player::*;
+pub use ship::*;
+pub use market::*;

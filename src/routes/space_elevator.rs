@@ -7,6 +7,7 @@ use axum::{
 };
 use tracing::{debug, info, warn, error, instrument};
 
+use crate::auth::AuthenticatedPlayer;
 use crate::error::AppError;
 use crate::models::{
     PlanetStatus, SpaceElevatorError, SpaceElevatorStatus, TransferDirection,
@@ -26,9 +27,10 @@ pub fn space_elevator_router() -> Router<AppState> {
         )
 }
 
-#[instrument(skip(state))]
+#[instrument(skip(state, auth))]
 async fn get_space_elevator(
     State(state): State<AppState>,
+    auth: AuthenticatedPlayer,
     Path((system_name, planet_id)): Path<(String, String)>,
 ) -> Result<Json<SpaceElevatorStatus>, AppError> {
     debug!("Getting space elevator status");
@@ -46,7 +48,10 @@ async fn get_space_elevator(
         .ok_or_else(|| AppError::PlanetNotFound(planet_id.clone()))?;
 
     match &planet.status {
-        PlanetStatus::Connected { space_elevator, .. } => {
+        PlanetStatus::Connected { space_elevator, station, .. } => {
+            if station.owner_id != auth.0.id {
+                return Err(AppError::Forbidden);
+            }
             debug!(planet_id = %planet_id, "Space elevator status retrieved");
             Ok(Json(space_elevator.status()))
         }
@@ -74,9 +79,10 @@ async fn get_space_elevator(
 /// Flow:
 /// - ToSurface: Station inventory -> Warehouse inventory
 /// - ToOrbit: Warehouse inventory -> Station inventory
-#[instrument(skip(state, request), fields(direction = ?request.direction, item_count = request.items.len()))]
+#[instrument(skip(state, auth, request), fields(direction = ?request.direction, item_count = request.items.len()))]
 async fn transfer(
     State(state): State<AppState>,
+    auth: AuthenticatedPlayer,
     Path((system_name, planet_id)): Path<(String, String)>,
     Json(request): Json<TransferRequest>,
 ) -> Result<Json<TransferResult>, AppError> {
@@ -109,6 +115,11 @@ async fn transfer(
 
         match &mut planet.status {
             PlanetStatus::Connected { space_elevator, station, .. } => {
+                // Check ownership
+                if station.owner_id != auth.0.id {
+                    return Err(AppError::Forbidden);
+                }
+
                 // Check cabin capacity
                 if total_quantity > space_elevator.config.cabin_capacity {
                     warn!(

@@ -8,6 +8,11 @@ use serde_json::{json, Value};
 use tower::ServiceExt;
 
 mod common;
+use common::ADMIN_TOKEN;
+
+fn admin_auth() -> String {
+    format!("Bearer {}", ADMIN_TOKEN)
+}
 
 /// Helper: create a station on Mars (Sol-4) which is settled
 async fn setup_mars_station(app: &axum::Router) {
@@ -20,8 +25,9 @@ async fn setup_mars_station(app: &axum::Router) {
         .oneshot(
             Request::builder()
                 .method("PUT")
-                .uri("/settlements/Sol/Sol-4/station")
+                .uri("/admin/settlements/Sol/Sol-4/station")
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(station_request.to_string()))
                 .unwrap(),
         )
@@ -42,8 +48,9 @@ async fn create_earth_mars_connection(app: &axum::Router) -> Value {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/connections")
+                .uri("/admin/connections")
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(request.to_string()))
                 .unwrap(),
         )
@@ -75,8 +82,6 @@ async fn test_create_connection() {
 async fn test_create_connection_different_systems() {
     let app = common::create_test_app();
 
-    // Try to create connection between planets in different systems
-    // This should fail because to_planet doesn't exist in "Sol"
     let request = json!({
         "system": "Sol",
         "from_planet": "Sol-3",
@@ -87,8 +92,9 @@ async fn test_create_connection_different_systems() {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/connections")
+                .uri("/admin/connections")
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(request.to_string()))
                 .unwrap(),
         )
@@ -102,7 +108,6 @@ async fn test_create_connection_different_systems() {
 async fn test_create_connection_not_connected() {
     let app = common::create_test_app();
 
-    // Mars (Sol-4) is only settled, not connected
     let request = json!({
         "system": "Sol",
         "from_planet": "Sol-3",
@@ -113,8 +118,9 @@ async fn test_create_connection_not_connected() {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/connections")
+                .uri("/admin/connections")
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(request.to_string()))
                 .unwrap(),
         )
@@ -138,8 +144,9 @@ async fn test_create_connection_same_planet() {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/connections")
+                .uri("/admin/connections")
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(request.to_string()))
                 .unwrap(),
         )
@@ -151,21 +158,21 @@ async fn test_create_connection_same_planet() {
 
 #[tokio::test]
 async fn test_accept_connection() {
-    let (app, state) = common::create_test_app_with_state();
+    let (app, _state) = common::create_test_app_with_state();
     setup_mars_station(&app).await;
 
     let connection = create_earth_mars_connection(&app).await;
     let id = connection["id"].as_str().unwrap();
 
-    // Accept the connection
     let update = json!({ "action": "accept" });
     let response = app
         .clone()
         .oneshot(
             Request::builder()
                 .method("PUT")
-                .uri(&format!("/connections/{}", id))
+                .uri(&format!("/admin/connections/{}", id))
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(update.to_string()))
                 .unwrap(),
         )
@@ -192,8 +199,9 @@ async fn test_reject_connection() {
         .oneshot(
             Request::builder()
                 .method("PUT")
-                .uri(&format!("/connections/{}", id))
+                .uri(&format!("/admin/connections/{}", id))
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(update.to_string()))
                 .unwrap(),
         )
@@ -220,8 +228,9 @@ async fn test_close_connection() {
         .oneshot(
             Request::builder()
                 .method("PUT")
-                .uri(&format!("/connections/{}", id))
+                .uri(&format!("/admin/connections/{}", id))
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(update.to_string()))
                 .unwrap(),
         )
@@ -235,8 +244,9 @@ async fn test_close_connection() {
         .oneshot(
             Request::builder()
                 .method("PUT")
-                .uri(&format!("/connections/{}", id))
+                .uri(&format!("/admin/connections/{}", id))
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(update.to_string()))
                 .unwrap(),
         )
@@ -274,8 +284,9 @@ async fn test_max_channels_exceeded() {
         .oneshot(
             Request::builder()
                 .method("PUT")
-                .uri(&format!("/connections/{}", id1))
+                .uri(&format!("/admin/connections/{}", id1))
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(update.to_string()))
                 .unwrap(),
         )
@@ -294,8 +305,9 @@ async fn test_max_channels_exceeded() {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/connections")
+                .uri("/admin/connections")
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(request.to_string()))
                 .unwrap(),
         )
@@ -318,7 +330,8 @@ async fn test_list_connections() {
         .clone()
         .oneshot(
             Request::builder()
-                .uri("/connections")
+                .uri("/admin/connections")
+                .header("Authorization", admin_auth())
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -342,7 +355,8 @@ async fn test_list_connections_filter_system() {
         .clone()
         .oneshot(
             Request::builder()
-                .uri("/connections?system=Sol")
+                .uri("/admin/connections?system=Sol")
+                .header("Authorization", admin_auth())
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -359,7 +373,8 @@ async fn test_list_connections_filter_system() {
         .clone()
         .oneshot(
             Request::builder()
-                .uri("/connections?system=NonExistent")
+                .uri("/admin/connections?system=NonExistent")
+                .header("Authorization", admin_auth())
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -383,7 +398,8 @@ async fn test_list_connections_filter_planet() {
         .clone()
         .oneshot(
             Request::builder()
-                .uri("/connections?planet=Sol-3")
+                .uri("/admin/connections?planet=Sol-3")
+                .header("Authorization", admin_auth())
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -400,7 +416,8 @@ async fn test_list_connections_filter_planet() {
         .clone()
         .oneshot(
             Request::builder()
-                .uri("/connections?planet=Sol-4")
+                .uri("/admin/connections?planet=Sol-4")
+                .header("Authorization", admin_auth())
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -424,7 +441,8 @@ async fn test_get_connection() {
         .clone()
         .oneshot(
             Request::builder()
-                .uri(&format!("/connections/{}", id))
+                .uri(&format!("/admin/connections/{}", id))
+                .header("Authorization", admin_auth())
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -450,8 +468,9 @@ async fn test_delete_connection() {
         .oneshot(
             Request::builder()
                 .method("PUT")
-                .uri(&format!("/connections/{}", id))
+                .uri(&format!("/admin/connections/{}", id))
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(update.to_string()))
                 .unwrap(),
         )
@@ -464,7 +483,8 @@ async fn test_delete_connection() {
         .oneshot(
             Request::builder()
                 .method("DELETE")
-                .uri(&format!("/connections/{}", id))
+                .uri(&format!("/admin/connections/{}", id))
+                .header("Authorization", admin_auth())
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -502,8 +522,9 @@ async fn test_close_frees_channels() {
         .oneshot(
             Request::builder()
                 .method("PUT")
-                .uri(&format!("/connections/{}", id))
+                .uri(&format!("/admin/connections/{}", id))
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(update.to_string()))
                 .unwrap(),
         )
@@ -516,8 +537,9 @@ async fn test_close_frees_channels() {
         .oneshot(
             Request::builder()
                 .method("PUT")
-                .uri(&format!("/connections/{}", id))
+                .uri(&format!("/admin/connections/{}", id))
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(update.to_string()))
                 .unwrap(),
         )
@@ -536,8 +558,9 @@ async fn test_close_frees_channels() {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/connections")
+                .uri("/admin/connections")
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(request.to_string()))
                 .unwrap(),
         )
@@ -560,8 +583,9 @@ async fn test_accept_already_active() {
         .oneshot(
             Request::builder()
                 .method("PUT")
-                .uri(&format!("/connections/{}", id))
+                .uri(&format!("/admin/connections/{}", id))
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(update.to_string()))
                 .unwrap(),
         )
@@ -574,8 +598,9 @@ async fn test_accept_already_active() {
         .oneshot(
             Request::builder()
                 .method("PUT")
-                .uri(&format!("/connections/{}", id))
+                .uri(&format!("/admin/connections/{}", id))
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(update.to_string()))
                 .unwrap(),
         )
@@ -599,8 +624,9 @@ async fn test_close_pending_fails() {
         .oneshot(
             Request::builder()
                 .method("PUT")
-                .uri(&format!("/connections/{}", id))
+                .uri(&format!("/admin/connections/{}", id))
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(update.to_string()))
                 .unwrap(),
         )

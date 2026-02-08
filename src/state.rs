@@ -5,15 +5,20 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 
 use crate::config::AppConfig;
-use crate::models::{MassDriverConnection, PlanetStatus};
+use crate::market::MarketState;
+use crate::models::{MassDriverConnection, PlanetStatus, Player, Ship};
 use crate::models::System;
 use crate::pulsar::PulsarManager;
 
 #[derive(Clone)]
 pub struct AppState {
     pub galaxy: Arc<RwLock<GalaxyState>>,
+    pub players: Arc<RwLock<HashMap<String, Player>>>,
+    pub ships: Arc<RwLock<HashMap<Uuid, Ship>>>,
+    pub market: Arc<RwLock<MarketState>>,
     pub pulsar: Option<Arc<PulsarManager>>,
     pub config: Arc<AppConfig>,
+    pub http_client: reqwest::Client,
 }
 
 #[derive(Debug, Default, serde::Serialize, serde::Deserialize)]
@@ -21,6 +26,13 @@ pub struct GalaxyState {
     pub systems: HashMap<String, System>,
     #[serde(skip)]
     pub connections: HashMap<Uuid, MassDriverConnection>,
+}
+
+#[derive(Debug, Default, serde::Serialize, serde::Deserialize)]
+pub struct SeedData {
+    pub systems: HashMap<String, System>,
+    #[serde(default)]
+    pub players: Vec<Player>,
 }
 
 impl GalaxyState {
@@ -49,6 +61,21 @@ pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<GalaxyState, Box<dyn st
     Ok(state)
 }
 
+pub fn load_seed_data<P: AsRef<Path>>(path: P) -> Result<SeedData, Box<dyn std::error::Error>> {
+    let content = std::fs::read_to_string(path)?;
+    let seed: SeedData = serde_json::from_str(&content)?;
+    Ok(seed)
+}
+
+pub fn load_players_from_seed<P: AsRef<Path>>(path: P) -> Result<HashMap<String, Player>, Box<dyn std::error::Error>> {
+    let seed = load_seed_data(path)?;
+    let mut players = HashMap::new();
+    for player in seed.players {
+        players.insert(player.id.clone(), player);
+    }
+    Ok(players)
+}
+
 pub fn create_galaxy_state() -> Arc<RwLock<GalaxyState>> {
     Arc::new(RwLock::new(GalaxyState::new()))
 }
@@ -61,16 +88,26 @@ pub fn create_galaxy_state_from_file<P: AsRef<Path>>(path: P) -> Result<Arc<RwLo
 pub fn create_app_state() -> AppState {
     AppState {
         galaxy: create_galaxy_state(),
+        players: Arc::new(RwLock::new(HashMap::new())),
+        ships: Arc::new(RwLock::new(HashMap::new())),
+        market: Arc::new(RwLock::new(MarketState::new(1024))),
         pulsar: None,
         config: Arc::new(AppConfig::default()),
+        http_client: reqwest::Client::new(),
     }
 }
 
 pub fn create_app_state_from_file<P: AsRef<Path>>(path: P) -> Result<AppState, Box<dyn std::error::Error>> {
-    let galaxy = create_galaxy_state_from_file(path)?;
+    let path_ref = path.as_ref();
+    let galaxy = create_galaxy_state_from_file(path_ref)?;
+    let players = load_players_from_seed(path_ref).unwrap_or_default();
     Ok(AppState {
         galaxy,
+        players: Arc::new(RwLock::new(players)),
+        ships: Arc::new(RwLock::new(HashMap::new())),
+        market: Arc::new(RwLock::new(MarketState::new(1024))),
         pulsar: None,
         config: Arc::new(AppConfig::default()),
+        http_client: reqwest::Client::new(),
     })
 }

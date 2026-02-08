@@ -13,12 +13,19 @@ use crate::models::{
 };
 use crate::state::AppState;
 
-pub fn stations_router() -> Router<AppState> {
+pub fn admin_stations_router() -> Router<AppState> {
     Router::new().route(
         "/{system_name}/{planet_id}/station",
         get(get_station)
             .put(create_or_update_station)
             .delete(delete_station),
+    )
+}
+
+pub fn player_stations_router() -> Router<AppState> {
+    Router::new().route(
+        "/{system_name}/{planet_id}/station",
+        get(get_station),
     )
 }
 

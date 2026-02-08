@@ -15,10 +15,16 @@ pub struct SystemFilter {
     pub star_type: Option<StarType>,
 }
 
-pub fn systems_router() -> Router<AppState> {
+pub fn admin_systems_router() -> Router<AppState> {
     Router::new()
         .route("/", post(create_system).get(list_systems))
         .route("/{name}", get(get_system).put(update_system).delete(delete_system))
+}
+
+pub fn player_systems_router() -> Router<AppState> {
+    Router::new()
+        .route("/", get(list_systems))
+        .route("/{name}", get(get_system))
 }
 
 #[instrument(skip(state, payload), fields(system_name = %payload.name))]

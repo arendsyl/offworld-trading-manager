@@ -1,0 +1,413 @@
+use std::collections::HashMap;
+use std::convert::Infallible;
+use std::time::Duration;
+
+use axum::{
+    extract::{Path, Query, State},
+    http::StatusCode,
+    response::sse::{Event, KeepAlive, Sse},
+    routing::{get, post},
+    Json, Router,
+};
+use futures::stream::Stream;
+use serde::Deserialize;
+use tokio_stream::wrappers::BroadcastStream;
+use tokio_stream::StreamExt;
+use tracing::instrument;
+use uuid::Uuid;
+
+use crate::auth::AuthenticatedPlayer;
+use crate::error::{AppError, MarketError};
+use crate::models::{
+    Order, OrderBookSummary, OrderSide, OrderStatus, OrderType, PlaceOrderRequest,
+    PlanetStatus, Ship, ShipStatus,
+};
+use crate::ship_lifecycle::spawn_ship_transit;
+use crate::state::AppState;
+
+pub fn player_market_router() -> Router<AppState> {
+    Router::new()
+        .route("/orders", post(place_order).get(list_orders))
+        .route("/orders/{order_id}", get(get_order).delete(cancel_order))
+        .route("/book/{good_name}", get(get_order_book))
+        .route("/trades", get(trade_stream))
+        .route("/prices", get(get_prices))
+}
+
+fn now_ms() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as u64
+}
+
+#[derive(Debug, Deserialize)]
+struct OrderQuery {
+    status: Option<String>,
+}
+
+#[instrument(skip(state, auth))]
+async fn place_order(
+    State(state): State<AppState>,
+    auth: AuthenticatedPlayer,
+    Json(body): Json<PlaceOrderRequest>,
+) -> Result<(StatusCode, Json<Order>), AppError> {
+    // Validate limit orders have a price
+    if body.order_type == OrderType::Limit && body.price.is_none() {
+        return Err(MarketError::PriceRequired.into());
+    }
+
+    // Validate station exists and is connected
+    {
+        let galaxy = state.galaxy.read().await;
+        let mut found = false;
+        for system in galaxy.systems.values() {
+            for planet in &system.planets {
+                if planet.id == body.station_planet_id {
+                    if let PlanetStatus::Connected { ref station, .. } = planet.status {
+                        if station.owner_id != auth.0.id {
+                            return Err(MarketError::StationNotFoundForOrder(
+                                body.station_planet_id.clone(),
+                            )
+                            .into());
+                        }
+                        found = true;
+                    } else {
+                        return Err(MarketError::StationNotFoundForOrder(
+                            body.station_planet_id.clone(),
+                        )
+                        .into());
+                    }
+                }
+            }
+        }
+        if !found {
+            return Err(MarketError::StationNotFoundForOrder(body.station_planet_id.clone()).into());
+        }
+    }
+
+    // Reservation at order placement
+    match body.side {
+        OrderSide::Buy => {
+            if body.order_type == OrderType::Limit {
+                let cost = body.price.unwrap() as i64 * body.quantity as i64;
+                let mut players = state.players.write().await;
+                let player = players
+                    .get_mut(&auth.0.id)
+                    .ok_or_else(|| AppError::PlayerNotFound(auth.0.id.clone()))?;
+                if player.credits < cost {
+                    return Err(MarketError::InsufficientCredits {
+                        needed: cost,
+                        available: player.credits,
+                    }
+                    .into());
+                }
+                player.credits -= cost;
+            }
+            // Market buy: credits deducted per match (handled later)
+        }
+        OrderSide::Sell => {
+            // Deduct goods from station inventory upfront
+            let mut galaxy = state.galaxy.write().await;
+            for system in galaxy.systems.values_mut() {
+                for planet in &mut system.planets {
+                    if planet.id == body.station_planet_id {
+                        if let PlanetStatus::Connected {
+                            ref mut station, ..
+                        } = planet.status
+                        {
+                            let available =
+                                station.inventory.get(&body.good_name).copied().unwrap_or(0);
+                            if available < body.quantity {
+                                return Err(MarketError::InsufficientInventory {
+                                    good_name: body.good_name.clone(),
+                                    requested: body.quantity,
+                                    available,
+                                }
+                                .into());
+                            }
+                            let entry = station
+                                .inventory
+                                .entry(body.good_name.clone())
+                                .or_insert(0);
+                            *entry -= body.quantity;
+                            if *entry == 0 {
+                                station.inventory.remove(&body.good_name);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    let order = Order {
+        id: Uuid::new_v4(),
+        player_id: auth.0.id.clone(),
+        good_name: body.good_name.clone(),
+        side: body.side.clone(),
+        order_type: body.order_type.clone(),
+        price: body.price,
+        quantity: body.quantity,
+        filled_quantity: 0,
+        status: OrderStatus::Open,
+        station_planet_id: body.station_planet_id.clone(),
+        created_at: now_ms(),
+    };
+
+    let order_id = order.id;
+
+    // Run matching engine
+    let trades = {
+        let mut market = state.market.write().await;
+        market.place_order(order)
+    };
+
+    // Process trades: transfer credits and spawn ships
+    for trade in &trades {
+        // Transfer credits between players
+        {
+            let mut players = state.players.write().await;
+            let total_cost = trade.price as i64 * trade.quantity as i64;
+
+            // For market buy orders, deduct from buyer now
+            if body.side == OrderSide::Buy && body.order_type == OrderType::Market {
+                if let Some(buyer) = players.get_mut(&trade.buyer_id) {
+                    if buyer.credits < total_cost {
+                        // This shouldn't happen in normal flow, but handle gracefully
+                        continue;
+                    }
+                    buyer.credits -= total_cost;
+                }
+            }
+
+            // Credit seller
+            if let Some(seller) = players.get_mut(&trade.seller_id) {
+                seller.credits += total_cost;
+            }
+
+            // For limit buy orders, refund price difference if trade price < order price
+            if body.side == OrderSide::Buy && body.order_type == OrderType::Limit {
+                if let Some(order_price) = body.price {
+                    let refund = (order_price as i64 - trade.price as i64) * trade.quantity as i64;
+                    if refund > 0 {
+                        if let Some(buyer) = players.get_mut(&trade.buyer_id) {
+                            buyer.credits += refund;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Spawn ship from seller's station to buyer's station
+        let (transit_secs, callback_url) = {
+            let galaxy = state.galaxy.read().await;
+            let mut seller_dist = 0.0f64;
+            let mut buyer_dist = 0.0f64;
+
+            for system in galaxy.systems.values() {
+                for planet in &system.planets {
+                    if planet.id == trade.seller_station {
+                        seller_dist = planet.distance_ua;
+                    }
+                    if planet.id == trade.buyer_station {
+                        buyer_dist = planet.distance_ua;
+                    }
+                }
+            }
+
+            let transit = (seller_dist - buyer_dist).abs() * state.config.ship.au_to_seconds;
+
+            let players = state.players.read().await;
+            let callback = players
+                .get(&trade.buyer_id)
+                .map(|p| p.callback_url.clone())
+                .unwrap_or_default();
+
+            (transit, callback)
+        };
+
+        let mut cargo = HashMap::new();
+        cargo.insert(trade.good_name.clone(), trade.quantity);
+
+        let ship = Ship {
+            id: Uuid::new_v4(),
+            owner_id: trade.seller_id.clone(),
+            origin_planet_id: trade.seller_station.clone(),
+            destination_planet_id: trade.buyer_station.clone(),
+            cargo,
+            status: ShipStatus::InTransit,
+            trade_id: Some(trade.id),
+            created_at: now_ms(),
+            arrival_at: None,
+            operation_complete_at: None,
+        };
+
+        let ship_id = ship.id;
+        {
+            let mut ships = state.ships.write().await;
+            ships.insert(ship_id, ship);
+        }
+
+        if trade.seller_station != trade.buyer_station {
+            spawn_ship_transit(
+                state.ships.clone(),
+                ship_id,
+                transit_secs,
+                callback_url,
+                state.config.ship.clone(),
+                state.http_client.clone(),
+            );
+        }
+    }
+
+    let market = state.market.read().await;
+    let result_order = market
+        .orders
+        .get(&order_id)
+        .cloned()
+        .ok_or_else(|| MarketError::OrderNotFound(order_id.to_string()))?;
+
+    Ok((StatusCode::CREATED, Json(result_order)))
+}
+
+#[instrument(skip(state, auth))]
+async fn list_orders(
+    State(state): State<AppState>,
+    auth: AuthenticatedPlayer,
+    Query(query): Query<OrderQuery>,
+) -> Json<Vec<Order>> {
+    let market = state.market.read().await;
+    let orders: Vec<Order> = market
+        .orders
+        .values()
+        .filter(|o| {
+            if o.player_id != auth.0.id {
+                return false;
+            }
+            if let Some(ref status_str) = query.status {
+                let status_json = format!("\"{}\"", status_str);
+                let order_status_json = serde_json::to_string(&o.status).unwrap_or_default();
+                if order_status_json != status_json {
+                    return false;
+                }
+            }
+            true
+        })
+        .cloned()
+        .collect();
+    Json(orders)
+}
+
+#[instrument(skip(state))]
+async fn get_order(
+    State(state): State<AppState>,
+    Path(order_id): Path<Uuid>,
+) -> Result<Json<Order>, AppError> {
+    let market = state.market.read().await;
+    let order = market
+        .orders
+        .get(&order_id)
+        .cloned()
+        .ok_or_else(|| MarketError::OrderNotFound(order_id.to_string()))?;
+    Ok(Json(order))
+}
+
+#[instrument(skip(state, auth))]
+async fn cancel_order(
+    State(state): State<AppState>,
+    auth: AuthenticatedPlayer,
+    Path(order_id): Path<Uuid>,
+) -> Result<Json<Order>, AppError> {
+    let cancelled_order = {
+        let mut market = state.market.write().await;
+
+        // Verify ownership
+        let order = market
+            .orders
+            .get(&order_id)
+            .ok_or_else(|| MarketError::OrderNotFound(order_id.to_string()))?;
+
+        if order.player_id != auth.0.id {
+            return Err(AppError::Forbidden);
+        }
+
+        market
+            .cancel_order(order_id)
+            .ok_or(MarketError::OrderNotCancellable)?
+    };
+
+    // Return reserved credits/goods
+    let remaining = cancelled_order.quantity - cancelled_order.filled_quantity;
+    match cancelled_order.side {
+        OrderSide::Buy => {
+            if let Some(price) = cancelled_order.price {
+                let refund = price as i64 * remaining as i64;
+                let mut players = state.players.write().await;
+                if let Some(player) = players.get_mut(&cancelled_order.player_id) {
+                    player.credits += refund;
+                }
+            }
+        }
+        OrderSide::Sell => {
+            let mut galaxy = state.galaxy.write().await;
+            for system in galaxy.systems.values_mut() {
+                for planet in &mut system.planets {
+                    if planet.id == cancelled_order.station_planet_id {
+                        if let PlanetStatus::Connected {
+                            ref mut station, ..
+                        } = planet.status
+                        {
+                            let entry = station
+                                .inventory
+                                .entry(cancelled_order.good_name.clone())
+                                .or_insert(0);
+                            *entry += remaining;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(Json(cancelled_order))
+}
+
+#[instrument(skip(state))]
+async fn get_order_book(
+    State(state): State<AppState>,
+    Path(good_name): Path<String>,
+) -> Json<OrderBookSummary> {
+    let market = state.market.read().await;
+    let summary = market.get_order_book_summary(&good_name);
+    Json(summary)
+}
+
+async fn trade_stream(
+    State(state): State<AppState>,
+) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+    let rx = {
+        let market = state.market.read().await;
+        market.subscribe()
+    };
+
+    let stream = BroadcastStream::new(rx).filter_map(|result| match result {
+        Ok(trade) => {
+            let data = serde_json::to_string(&trade).unwrap_or_default();
+            Some(Ok(Event::default().event("trade").data(data)))
+        }
+        Err(tokio_stream::wrappers::errors::BroadcastStreamRecvError::Lagged(n)) => {
+            Some(Ok(Event::default()
+                .event("lagged")
+                .data(format!("{{\"missed_events\":{}}}", n))))
+        }
+    });
+
+    Sse::new(stream).keep_alive(KeepAlive::new().interval(Duration::from_secs(15)))
+}
+
+#[instrument(skip(state))]
+async fn get_prices(State(state): State<AppState>) -> Json<HashMap<String, u64>> {
+    let market = state.market.read().await;
+    Json(market.last_prices.clone())
+}

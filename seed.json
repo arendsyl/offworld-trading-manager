@@ -51,15 +51,21 @@
           },
           "station": {
             "name": "Geneva Orbital",
-            "owner_id": "earth-gov",
-            "inventory": {},
+            "owner_id": "alpha-team",
+            "inventory": {
+              "iron_ore": 5000,
+              "copper_ore": 3000,
+              "food": 2000,
+              "water": 5000,
+              "silicon": 1000
+            },
             "mass_driver": {
               "max_channels": 4
             }
           },
           "space_elevator": {
             "warehouse": {
-              "owner_id": "earth-gov",
+              "owner_id": "alpha-team",
               "inventory": {
                 "iron_ore": 1000,
                 "copper_ore": 500,
@@ -137,7 +143,45 @@
             "category": "telluric",
             "climate": "arctic"
           },
-          "status": "uninhabited"
+          "status": "connected",
+          "settlement": {
+            "name": "Frost Haven",
+            "population": 500000,
+            "economy": {
+              "credits": 0,
+              "tax_rate": 0.0
+            }
+          },
+          "station": {
+            "name": "Frost Orbital",
+            "owner_id": "beta-corp",
+            "inventory": {
+              "iron_ore": 2000,
+              "copper_ore": 1000,
+              "rare_metals": 500,
+              "food": 500,
+              "water": 1000
+            },
+            "mass_driver": {
+              "max_channels": 2
+            }
+          },
+          "space_elevator": {
+            "warehouse": {
+              "owner_id": "beta-corp",
+              "inventory": {
+                "iron_ore": 500,
+                "rare_metals": 200
+              }
+            },
+            "config": {
+              "cabin_count": 1,
+              "cabin_capacity": 500,
+              "transfer_duration_secs": 3,
+              "failure_rate": 0.2,
+              "repair_duration_secs": 20
+            }
+          }
         }
       ]
     },
@@ -163,5 +207,28 @@
         }
       ]
     }
-  }
+  },
+  "players": [
+    {
+      "id": "alpha-team",
+      "name": "Alpha Trading Co.",
+      "credits": 100000,
+      "api_key": "alpha-secret-key-001",
+      "callback_url": "http://localhost:8081/webhook"
+    },
+    {
+      "id": "beta-corp",
+      "name": "Beta Corporation",
+      "credits": 75000,
+      "api_key": "beta-secret-key-002",
+      "callback_url": "http://localhost:8082/webhook"
+    },
+    {
+      "id": "gamma-guild",
+      "name": "Gamma Traders Guild",
+      "credits": 50000,
+      "api_key": "gamma-secret-key-003",
+      "callback_url": "http://localhost:8083/webhook"
+    }
+  ]
 }

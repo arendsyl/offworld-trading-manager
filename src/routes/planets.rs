@@ -16,11 +16,18 @@ pub struct PlanetFilter {
     pub planet_type: Option<String>,
 }
 
-pub fn planets_router() -> Router<AppState> {
+pub fn admin_planets_router() -> Router<AppState> {
     Router::new()
         .route("/{system_name}/planets", post(create_planet).get(list_planets))
         .route("/{system_name}/planets/{planet_id}", get(get_planet).put(update_planet).delete(delete_planet))
         .route("/{system_name}/{planet_id}", get(get_planet).put(update_planet).delete(delete_planet))
+}
+
+pub fn player_planets_router() -> Router<AppState> {
+    Router::new()
+        .route("/{system_name}/planets", get(list_planets))
+        .route("/{system_name}/planets/{planet_id}", get(get_planet))
+        .route("/{system_name}/{planet_id}", get(get_planet))
 }
 
 fn generate_planet_id(star_name: &str, position: u32) -> String {

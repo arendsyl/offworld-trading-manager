@@ -10,19 +10,26 @@ use tower::ServiceExt;
 
 mod common;
 
+use common::{ADMIN_TOKEN, ALPHA_TOKEN};
+
+fn admin_auth() -> String {
+    format!("Bearer {}", ADMIN_TOKEN)
+}
+
+fn player_auth(token: &str) -> String {
+    format!("Bearer {}", token)
+}
+
 #[tokio::test]
 async fn test_get_space_elevator_not_connected() {
     let app = common::create_test_app();
 
-    // Earth (Sol-3) is connected, but let's test with a fresh Mars that has no station yet
-    // First we need a planet that is settled but not connected
-    // Mars (Sol-4) is settled but not connected in seed data
-    // However, since we use Mars for other tests, let's use a different approach:
     // Venus (Sol-2) is uninhabited, so it returns 404 (not found)
     let response = app
         .oneshot(
             Request::builder()
                 .uri("/settlements/Sol/Sol-2/space-elevator")
+                .header("Authorization", player_auth(ALPHA_TOKEN))
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -37,29 +44,31 @@ async fn test_get_space_elevator_not_connected() {
 async fn test_get_space_elevator_after_station_created() {
     let (app, _state) = common::create_test_app_with_state();
 
-    // Create station on Mars first
+    // Create station on Mars via admin route
     let station_request = json!({
         "name": "Orbital Station Alpha",
-        "owner_id": "player-1"
+        "owner_id": "alpha-team"
     });
 
     app.clone()
         .oneshot(
             Request::builder()
                 .method("PUT")
-                .uri("/settlements/Sol/Sol-4/station")
+                .uri("/admin/settlements/Sol/Sol-4/station")
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(station_request.to_string()))
                 .unwrap(),
         )
         .await
         .unwrap();
 
-    // Get the space elevator
+    // Get the space elevator as the station owner
     let response = app
         .oneshot(
             Request::builder()
                 .uri("/settlements/Sol/Sol-4/space-elevator")
+                .header("Authorization", player_auth(ALPHA_TOKEN))
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -92,18 +101,19 @@ async fn test_get_space_elevator_after_station_created() {
 async fn test_transfer_success() {
     let (app, state) = common::create_test_app_with_state();
 
-    // Create station on Mars first
+    // Create station on Mars via admin route
     let station_request = json!({
         "name": "Orbital Station Alpha",
-        "owner_id": "player-1"
+        "owner_id": "alpha-team"
     });
 
     app.clone()
         .oneshot(
             Request::builder()
                 .method("PUT")
-                .uri("/settlements/Sol/Sol-4/station")
+                .uri("/admin/settlements/Sol/Sol-4/station")
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(station_request.to_string()))
                 .unwrap(),
         )
@@ -120,7 +130,7 @@ async fn test_transfer_success() {
         }
     }
 
-    // Perform transfer
+    // Perform transfer as station owner
     let transfer_request = json!({
         "direction": "to_surface",
         "items": [{"good_name": "test_goods", "quantity": 10}]
@@ -133,6 +143,7 @@ async fn test_transfer_success() {
                 .method("POST")
                 .uri("/settlements/Sol/Sol-4/space-elevator/transfer")
                 .header("Content-Type", "application/json")
+                .header("Authorization", player_auth(ALPHA_TOKEN))
                 .body(Body::from(transfer_request.to_string()))
                 .unwrap(),
         )
@@ -174,6 +185,7 @@ async fn test_transfer_not_connected() {
                 .method("POST")
                 .uri("/settlements/Sol/Sol-2/space-elevator/transfer")
                 .header("Content-Type", "application/json")
+                .header("Authorization", player_auth(ALPHA_TOKEN))
                 .body(Body::from(transfer_request.to_string()))
                 .unwrap(),
         )
@@ -188,18 +200,19 @@ async fn test_transfer_not_connected() {
 async fn test_transfer_no_cabin_available() {
     let (app, state) = common::create_test_app_with_state();
 
-    // Create station on Mars first
+    // Create station on Mars via admin route
     let station_request = json!({
         "name": "Orbital Station Alpha",
-        "owner_id": "player-1"
+        "owner_id": "alpha-team"
     });
 
     app.clone()
         .oneshot(
             Request::builder()
                 .method("PUT")
-                .uri("/settlements/Sol/Sol-4/station")
+                .uri("/admin/settlements/Sol/Sol-4/station")
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(station_request.to_string()))
                 .unwrap(),
         )
@@ -238,6 +251,7 @@ async fn test_transfer_no_cabin_available() {
                     .method("POST")
                     .uri("/settlements/Sol/Sol-4/space-elevator/transfer")
                     .header("Content-Type", "application/json")
+                    .header("Authorization", player_auth(ALPHA_TOKEN))
                     .body(Body::from(body))
                     .unwrap(),
             )
@@ -253,6 +267,7 @@ async fn test_transfer_no_cabin_available() {
                     .method("POST")
                     .uri("/settlements/Sol/Sol-4/space-elevator/transfer")
                     .header("Content-Type", "application/json")
+                    .header("Authorization", player_auth(ALPHA_TOKEN))
                     .body(Body::from(body))
                     .unwrap(),
             )
@@ -268,6 +283,7 @@ async fn test_transfer_no_cabin_available() {
                     .method("POST")
                     .uri("/settlements/Sol/Sol-4/space-elevator/transfer")
                     .header("Content-Type", "application/json")
+                    .header("Authorization", player_auth(ALPHA_TOKEN))
                     .body(Body::from(body))
                     .unwrap(),
             )
@@ -285,6 +301,7 @@ async fn test_transfer_no_cabin_available() {
                 .method("POST")
                 .uri("/settlements/Sol/Sol-4/space-elevator/transfer")
                 .header("Content-Type", "application/json")
+                .header("Authorization", player_auth(ALPHA_TOKEN))
                 .body(Body::from(req_body))
                 .unwrap(),
         )
@@ -311,18 +328,19 @@ async fn test_transfer_no_cabin_available() {
 async fn test_cabin_states_after_transfer() {
     let (app, state) = common::create_test_app_with_state();
 
-    // Create station
+    // Create station via admin route
     let station_request = json!({
         "name": "Orbital Station Alpha",
-        "owner_id": "player-1"
+        "owner_id": "alpha-team"
     });
 
     app.clone()
         .oneshot(
             Request::builder()
                 .method("PUT")
-                .uri("/settlements/Sol/Sol-4/station")
+                .uri("/admin/settlements/Sol/Sol-4/station")
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(station_request.to_string()))
                 .unwrap(),
         )
@@ -339,7 +357,7 @@ async fn test_cabin_states_after_transfer() {
         }
     }
 
-    // Perform a transfer
+    // Perform a transfer as station owner
     let transfer_request = json!({
         "direction": "to_surface",
         "items": [{"good_name": "test_goods", "quantity": 10}]
@@ -352,6 +370,7 @@ async fn test_cabin_states_after_transfer() {
                 .method("POST")
                 .uri("/settlements/Sol/Sol-4/space-elevator/transfer")
                 .header("Content-Type", "application/json")
+                .header("Authorization", player_auth(ALPHA_TOKEN))
                 .body(Body::from(transfer_request.to_string()))
                 .unwrap(),
         )
@@ -366,6 +385,7 @@ async fn test_cabin_states_after_transfer() {
         .oneshot(
             Request::builder()
                 .uri("/settlements/Sol/Sol-4/space-elevator")
+                .header("Authorization", player_auth(ALPHA_TOKEN))
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -398,18 +418,19 @@ async fn test_cabin_states_after_transfer() {
 async fn test_transfer_insufficient_stock() {
     let (app, _state) = common::create_test_app_with_state();
 
-    // Create station
+    // Create station via admin route
     let station_request = json!({
         "name": "Orbital Station Alpha",
-        "owner_id": "player-1"
+        "owner_id": "alpha-team"
     });
 
     app.clone()
         .oneshot(
             Request::builder()
                 .method("PUT")
-                .uri("/settlements/Sol/Sol-4/station")
+                .uri("/admin/settlements/Sol/Sol-4/station")
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(station_request.to_string()))
                 .unwrap(),
         )
@@ -428,6 +449,7 @@ async fn test_transfer_insufficient_stock() {
                 .method("POST")
                 .uri("/settlements/Sol/Sol-4/space-elevator/transfer")
                 .header("Content-Type", "application/json")
+                .header("Authorization", player_auth(ALPHA_TOKEN))
                 .body(Body::from(transfer_request.to_string()))
                 .unwrap(),
         )
@@ -445,18 +467,19 @@ async fn test_transfer_insufficient_stock() {
 async fn test_transfer_success_moves_inventory() {
     let (app, state) = common::create_test_app_with_state();
 
-    // Create station
+    // Create station via admin route
     let station_request = json!({
         "name": "Orbital Station Alpha",
-        "owner_id": "player-1"
+        "owner_id": "alpha-team"
     });
 
     app.clone()
         .oneshot(
             Request::builder()
                 .method("PUT")
-                .uri("/settlements/Sol/Sol-4/station")
+                .uri("/admin/settlements/Sol/Sol-4/station")
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(station_request.to_string()))
                 .unwrap(),
         )
@@ -473,7 +496,7 @@ async fn test_transfer_success_moves_inventory() {
         }
     }
 
-    // Transfer to surface
+    // Transfer to surface as station owner
     let transfer_request = json!({
         "direction": "to_surface",
         "items": [{"good_name": "iron_ore", "quantity": 50}]
@@ -486,6 +509,7 @@ async fn test_transfer_success_moves_inventory() {
                 .method("POST")
                 .uri("/settlements/Sol/Sol-4/space-elevator/transfer")
                 .header("Content-Type", "application/json")
+                .header("Authorization", player_auth(ALPHA_TOKEN))
                 .body(Body::from(transfer_request.to_string()))
                 .unwrap(),
         )
@@ -524,18 +548,19 @@ async fn test_transfer_success_moves_inventory() {
 async fn test_transfer_failure_reverts_inventory() {
     let (app, state) = common::create_test_app_with_state();
 
-    // Create station with high failure rate config
+    // Create station with high failure rate config via admin route
     let station_request = json!({
         "name": "Orbital Station Alpha",
-        "owner_id": "player-1"
+        "owner_id": "alpha-team"
     });
 
     app.clone()
         .oneshot(
             Request::builder()
                 .method("PUT")
-                .uri("/settlements/Sol/Sol-4/station")
+                .uri("/admin/settlements/Sol/Sol-4/station")
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(station_request.to_string()))
                 .unwrap(),
         )
@@ -567,6 +592,7 @@ async fn test_transfer_failure_reverts_inventory() {
                 .method("POST")
                 .uri("/settlements/Sol/Sol-4/space-elevator/transfer")
                 .header("Content-Type", "application/json")
+                .header("Authorization", player_auth(ALPHA_TOKEN))
                 .body(Body::from(transfer_request.to_string()))
                 .unwrap(),
         )
@@ -602,18 +628,19 @@ async fn test_transfer_failure_reverts_inventory() {
 async fn test_transfer_to_orbit_moves_inventory() {
     let (app, state) = common::create_test_app_with_state();
 
-    // Create station
+    // Create station via admin route
     let station_request = json!({
         "name": "Orbital Station Alpha",
-        "owner_id": "player-1"
+        "owner_id": "alpha-team"
     });
 
     app.clone()
         .oneshot(
             Request::builder()
                 .method("PUT")
-                .uri("/settlements/Sol/Sol-4/station")
+                .uri("/admin/settlements/Sol/Sol-4/station")
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(station_request.to_string()))
                 .unwrap(),
         )
@@ -632,7 +659,7 @@ async fn test_transfer_to_orbit_moves_inventory() {
         }
     }
 
-    // Transfer to orbit
+    // Transfer to orbit as station owner
     let transfer_request = json!({
         "direction": "to_orbit",
         "items": [{"good_name": "food", "quantity": 75}]
@@ -645,6 +672,7 @@ async fn test_transfer_to_orbit_moves_inventory() {
                 .method("POST")
                 .uri("/settlements/Sol/Sol-4/space-elevator/transfer")
                 .header("Content-Type", "application/json")
+                .header("Authorization", player_auth(ALPHA_TOKEN))
                 .body(Body::from(transfer_request.to_string()))
                 .unwrap(),
         )
@@ -679,18 +707,19 @@ async fn test_transfer_to_orbit_moves_inventory() {
 async fn test_transfer_multiple_items() {
     let (app, state) = common::create_test_app_with_state();
 
-    // Create station
+    // Create station via admin route
     let station_request = json!({
         "name": "Orbital Station Alpha",
-        "owner_id": "player-1"
+        "owner_id": "alpha-team"
     });
 
     app.clone()
         .oneshot(
             Request::builder()
                 .method("PUT")
-                .uri("/settlements/Sol/Sol-4/station")
+                .uri("/admin/settlements/Sol/Sol-4/station")
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(station_request.to_string()))
                 .unwrap(),
         )
@@ -711,7 +740,7 @@ async fn test_transfer_multiple_items() {
         }
     }
 
-    // Transfer multiple items in one trip
+    // Transfer multiple items in one trip as station owner
     let transfer_request = json!({
         "direction": "to_surface",
         "items": [
@@ -728,6 +757,7 @@ async fn test_transfer_multiple_items() {
                 .method("POST")
                 .uri("/settlements/Sol/Sol-4/space-elevator/transfer")
                 .header("Content-Type", "application/json")
+                .header("Authorization", player_auth(ALPHA_TOKEN))
                 .body(Body::from(transfer_request.to_string()))
                 .unwrap(),
         )
@@ -767,18 +797,19 @@ async fn test_transfer_multiple_items() {
 async fn test_transfer_exceeds_capacity() {
     let (app, state) = common::create_test_app_with_state();
 
-    // Create station
+    // Create station via admin route
     let station_request = json!({
         "name": "Orbital Station Alpha",
-        "owner_id": "player-1"
+        "owner_id": "alpha-team"
     });
 
     app.clone()
         .oneshot(
             Request::builder()
                 .method("PUT")
-                .uri("/settlements/Sol/Sol-4/station")
+                .uri("/admin/settlements/Sol/Sol-4/station")
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(station_request.to_string()))
                 .unwrap(),
         )
@@ -795,7 +826,7 @@ async fn test_transfer_exceeds_capacity() {
         }
     }
 
-    // Try to transfer more than cabin capacity
+    // Try to transfer more than cabin capacity as station owner
     let transfer_request = json!({
         "direction": "to_surface",
         "items": [{"good_name": "iron_ore", "quantity": 150}]
@@ -807,6 +838,7 @@ async fn test_transfer_exceeds_capacity() {
                 .method("POST")
                 .uri("/settlements/Sol/Sol-4/space-elevator/transfer")
                 .header("Content-Type", "application/json")
+                .header("Authorization", player_auth(ALPHA_TOKEN))
                 .body(Body::from(transfer_request.to_string()))
                 .unwrap(),
         )
@@ -824,25 +856,26 @@ async fn test_transfer_exceeds_capacity() {
 async fn test_transfer_empty_items() {
     let (app, _state) = common::create_test_app_with_state();
 
-    // Create station
+    // Create station via admin route
     let station_request = json!({
         "name": "Orbital Station Alpha",
-        "owner_id": "player-1"
+        "owner_id": "alpha-team"
     });
 
     app.clone()
         .oneshot(
             Request::builder()
                 .method("PUT")
-                .uri("/settlements/Sol/Sol-4/station")
+                .uri("/admin/settlements/Sol/Sol-4/station")
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(station_request.to_string()))
                 .unwrap(),
         )
         .await
         .unwrap();
 
-    // Try to transfer with empty items array
+    // Try to transfer with empty items array as station owner
     let transfer_request = json!({
         "direction": "to_surface",
         "items": []
@@ -854,6 +887,7 @@ async fn test_transfer_empty_items() {
                 .method("POST")
                 .uri("/settlements/Sol/Sol-4/space-elevator/transfer")
                 .header("Content-Type", "application/json")
+                .header("Authorization", player_auth(ALPHA_TOKEN))
                 .body(Body::from(transfer_request.to_string()))
                 .unwrap(),
         )

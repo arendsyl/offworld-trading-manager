@@ -15,7 +15,7 @@ use crate::models::{
 };
 use crate::state::AppState;
 
-pub fn connections_router() -> Router<AppState> {
+pub fn admin_connections_router() -> Router<AppState> {
     Router::new()
         .route("/", get(list_connections).post(create_connection))
         .route(

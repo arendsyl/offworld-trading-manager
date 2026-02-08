@@ -1,21 +1,30 @@
 use axum::{
     body::Body,
     http::{Request, StatusCode},
-    Router,
 };
 use http_body_util::BodyExt;
 use serde_json::{json, Value};
 use tower::ServiceExt;
 
 mod common;
-use common::create_test_app;
+use common::{create_test_app, ADMIN_TOKEN};
+
+fn admin_auth() -> String {
+    format!("Bearer {}", ADMIN_TOKEN)
+}
 
 #[tokio::test]
 async fn test_list_systems() {
     let app = create_test_app();
 
     let response = app
-        .oneshot(Request::builder().uri("/systems").body(Body::empty()).unwrap())
+        .oneshot(
+            Request::builder()
+                .uri("/admin/systems")
+                .header("Authorization", admin_auth())
+                .body(Body::empty())
+                .unwrap(),
+        )
         .await
         .unwrap();
 
@@ -41,8 +50,9 @@ async fn test_create_system() {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/systems")
+                .uri("/admin/systems")
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(new_system.to_string()))
                 .unwrap(),
         )
@@ -62,11 +72,11 @@ async fn test_create_system() {
 async fn test_get_system() {
     let app = common::create_test_app();
 
-    // Use "Sol" which has no spaces and is safe for URIs
     let response = app
         .oneshot(
             Request::builder()
-                .uri("/systems/Sol")
+                .uri("/admin/systems/Sol")
+                .header("Authorization", admin_auth())
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -83,7 +93,8 @@ async fn test_get_system_not_found() {
     let response = app
         .oneshot(
             Request::builder()
-                .uri("/systems/00000000-0000-0000-0000-000000000000")
+                .uri("/admin/systems/00000000-0000-0000-0000-000000000000")
+                .header("Authorization", admin_auth())
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -105,8 +116,9 @@ async fn test_update_system() {
         .oneshot(
             Request::builder()
                 .method("PUT")
-                .uri("/systems/Sol")
+                .uri("/admin/systems/Sol")
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(update.to_string()))
                 .unwrap(),
         )
@@ -129,7 +141,8 @@ async fn test_delete_system() {
         .oneshot(
             Request::builder()
                 .method("DELETE")
-                .uri("/systems/Sol")
+                .uri("/admin/systems/Sol")
+                .header("Authorization", admin_auth())
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -146,7 +159,8 @@ async fn test_list_planets() {
     let response = app
         .oneshot(
             Request::builder()
-                .uri("/systems/Sol/planets")
+                .uri("/admin/systems/Sol/planets")
+                .header("Authorization", admin_auth())
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -179,8 +193,9 @@ async fn test_create_planet() {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/systems/Sol/planets")
+                .uri("/admin/systems/Sol/planets")
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(new_planet.to_string()))
                 .unwrap(),
         )
@@ -203,7 +218,8 @@ async fn test_get_planet() {
     let response = app
         .oneshot(
             Request::builder()
-                .uri("/systems/Sol/planets/Sol-3")
+                .uri("/admin/systems/Sol/planets/Sol-3")
+                .header("Authorization", admin_auth())
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -230,8 +246,9 @@ async fn test_update_planet() {
         .oneshot(
             Request::builder()
                 .method("PUT")
-                .uri("/systems/Sol/planets/Sol-3")
+                .uri("/admin/systems/Sol/planets/Sol-3")
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(update.to_string()))
                 .unwrap(),
         )
@@ -254,7 +271,8 @@ async fn test_delete_planet() {
         .oneshot(
             Request::builder()
                 .method("DELETE")
-                .uri("/systems/Sol/planets/Sol-1")
+                .uri("/admin/systems/Sol/planets/Sol-1")
+                .header("Authorization", admin_auth())
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -282,8 +300,9 @@ async fn test_create_planet_conflict() {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/systems/Sol/planets")
+                .uri("/admin/systems/Sol/planets")
                 .header("Content-Type", "application/json")
+                .header("Authorization", admin_auth())
                 .body(Body::from(duplicate_planet.to_string()))
                 .unwrap(),
         )
@@ -291,4 +310,39 @@ async fn test_create_planet_conflict() {
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::CONFLICT);
+}
+
+#[tokio::test]
+async fn test_admin_requires_auth() {
+    let app = create_test_app();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/admin/systems")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn test_admin_rejects_player_token() {
+    let app = create_test_app();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/admin/systems")
+                .header("Authorization", format!("Bearer {}", common::ALPHA_TOKEN))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 }

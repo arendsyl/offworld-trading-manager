@@ -35,6 +35,46 @@ pub enum MassDriverError {
     SameStation,
 }
 
+#[derive(Debug, Clone, Error)]
+pub enum ShipError {
+    #[error("Ship not found: {0}")]
+    ShipNotFound(String),
+    #[error("Invalid ship state for this action")]
+    InvalidShipState,
+    #[error("Not the owner of the destination station")]
+    NotStationOwner,
+    #[error("Insufficient cargo at origin station: {good_name} (need {requested}, have {available})")]
+    InsufficientCargo {
+        good_name: String,
+        requested: u64,
+        available: u64,
+    },
+    #[error("Cannot ship to the same station")]
+    SameStation,
+}
+
+#[derive(Debug, Clone, Error)]
+pub enum MarketError {
+    #[error("Insufficient credits: need {needed}, have {available}")]
+    InsufficientCredits { needed: i64, available: i64 },
+    #[error("Insufficient inventory at station: {good_name} (need {requested}, have {available})")]
+    InsufficientInventory {
+        good_name: String,
+        requested: u64,
+        available: u64,
+    },
+    #[error("Order not found: {0}")]
+    OrderNotFound(String),
+    #[error("Order cannot be cancelled in current state")]
+    OrderNotCancellable,
+    #[error("No match available for market order")]
+    NoMatchForMarketOrder,
+    #[error("Price is required for limit orders")]
+    PriceRequired,
+    #[error("Station not found for order: {0}")]
+    StationNotFoundForOrder(String),
+}
+
 #[derive(Debug, Error)]
 pub enum AppError {
     #[error("System not found: {0}")]
@@ -63,6 +103,21 @@ pub enum AppError {
 
     #[error("{0}")]
     MassDriver(#[from] MassDriverError),
+
+    #[error("Player not found: {0}")]
+    PlayerNotFound(String),
+
+    #[error("Unauthorized: missing or invalid Bearer token")]
+    Unauthorized,
+
+    #[error("Forbidden: you do not have permission")]
+    Forbidden,
+
+    #[error("{0}")]
+    Ship(#[from] ShipError),
+
+    #[error("{0}")]
+    Market(#[from] MarketError),
 }
 
 #[derive(Serialize)]
@@ -101,6 +156,31 @@ impl IntoResponse for AppError {
                     MassDriverError::InsufficientInventory { .. } => StatusCode::BAD_REQUEST,
                     MassDriverError::ConnectionNotActive => StatusCode::CONFLICT,
                     MassDriverError::SameStation => StatusCode::BAD_REQUEST,
+                };
+                (status, self.to_string())
+            }
+            AppError::PlayerNotFound(_) => (StatusCode::NOT_FOUND, self.to_string()),
+            AppError::Unauthorized => (StatusCode::UNAUTHORIZED, self.to_string()),
+            AppError::Forbidden => (StatusCode::FORBIDDEN, self.to_string()),
+            AppError::Ship(e) => {
+                let status = match e {
+                    ShipError::ShipNotFound(_) => StatusCode::NOT_FOUND,
+                    ShipError::InvalidShipState => StatusCode::CONFLICT,
+                    ShipError::NotStationOwner => StatusCode::FORBIDDEN,
+                    ShipError::InsufficientCargo { .. } => StatusCode::BAD_REQUEST,
+                    ShipError::SameStation => StatusCode::BAD_REQUEST,
+                };
+                (status, self.to_string())
+            }
+            AppError::Market(e) => {
+                let status = match e {
+                    MarketError::InsufficientCredits { .. } => StatusCode::BAD_REQUEST,
+                    MarketError::InsufficientInventory { .. } => StatusCode::BAD_REQUEST,
+                    MarketError::OrderNotFound(_) => StatusCode::NOT_FOUND,
+                    MarketError::OrderNotCancellable => StatusCode::CONFLICT,
+                    MarketError::NoMatchForMarketOrder => StatusCode::BAD_REQUEST,
+                    MarketError::PriceRequired => StatusCode::BAD_REQUEST,
+                    MarketError::StationNotFoundForOrder(_) => StatusCode::NOT_FOUND,
                 };
                 (status, self.to_string())
             }

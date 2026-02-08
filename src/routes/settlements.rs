@@ -10,7 +10,7 @@ use crate::error::AppError;
 use crate::models::{CreateSettlementRequest, Economy, Planet, PlanetStatus, Settlement};
 use crate::state::AppState;
 
-pub fn settlements_router() -> Router<AppState> {
+pub fn admin_settlements_router() -> Router<AppState> {
     Router::new()
         .route("/{system_name}", get(list_settlements_in_system))
         .route(
@@ -19,6 +19,12 @@ pub fn settlements_router() -> Router<AppState> {
                 .put(create_or_update_settlement)
                 .delete(delete_settlement),
         )
+}
+
+pub fn player_settlements_router() -> Router<AppState> {
+    Router::new()
+        .route("/{system_name}", get(list_settlements_in_system))
+        .route("/{system_name}/{planet_id}", get(get_settlement))
 }
 
 #[instrument(skip(state))]

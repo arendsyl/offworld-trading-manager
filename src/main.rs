@@ -1,17 +1,24 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use axum::Router;
 use clap::Parser;
+use tokio::sync::RwLock;
 use tracing::{info, error, warn};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use offworld_trading_manager::config::load_config;
 use offworld_trading_manager::consumer::spawn_send_consumer;
+use offworld_trading_manager::market::MarketState;
 use offworld_trading_manager::models::PlanetStatus;
 use offworld_trading_manager::pulsar::PulsarManager;
+use offworld_trading_manager::auth::{admin_auth_middleware, player_auth_middleware};
 use offworld_trading_manager::routes::{
-    connections_router, planets_router, settlements_router, space_elevator_router, stations_router,
-    systems_router,
+    admin_connections_router, admin_planets_router, admin_players_router,
+    admin_settlements_router, admin_stations_router, admin_systems_router,
+    player_market_router, player_planets_router, player_players_router,
+    player_settlements_router, player_ships_router, player_stations_router,
+    player_systems_router, space_elevator_router,
 };
 use offworld_trading_manager::state::{self, AppState};
 
@@ -78,6 +85,18 @@ async fn main() {
         }
     };
 
+    // Load players from seed data
+    let players = match &config.seed {
+        Some(seed_path) => {
+            state::load_players_from_seed(seed_path).unwrap_or_else(|e| {
+                warn!(error = %e, "Failed to load players from seed data");
+                HashMap::new()
+            })
+        }
+        None => HashMap::new(),
+    };
+
+    let trade_channel_capacity = config.market.trade_channel_capacity;
     let config = Arc::new(config);
 
     // Try to connect to Pulsar
@@ -94,8 +113,12 @@ async fn main() {
 
     let app_state = AppState {
         galaxy: galaxy.clone(),
+        players: Arc::new(RwLock::new(players)),
+        ships: Arc::new(RwLock::new(HashMap::new())),
+        market: Arc::new(RwLock::new(MarketState::new(trade_channel_capacity))),
         pulsar: pulsar.clone(),
         config: config.clone(),
+        http_client: reqwest::Client::new(),
     };
 
     // Spawn consumers for existing Connected stations if Pulsar is available
@@ -117,15 +140,32 @@ async fn main() {
         drop(galaxy_read);
     }
 
-    let app = Router::new()
-        .nest("/systems", systems_router().merge(planets_router()))
+    let admin_router = Router::new()
+        .nest("/systems", admin_systems_router().merge(admin_planets_router()))
         .nest(
             "/settlements",
-            settlements_router()
-                .merge(stations_router())
+            admin_settlements_router().merge(admin_stations_router()),
+        )
+        .nest("/connections", admin_connections_router())
+        .nest("/players", admin_players_router())
+        .layer(axum::middleware::from_fn_with_state(app_state.clone(), admin_auth_middleware));
+
+    let player_router = Router::new()
+        .nest("/systems", player_systems_router().merge(player_planets_router()))
+        .nest(
+            "/settlements",
+            player_settlements_router()
+                .merge(player_stations_router())
                 .merge(space_elevator_router()),
         )
-        .nest("/connections", connections_router())
+        .nest("/players", player_players_router())
+        .nest("/ships", player_ships_router())
+        .nest("/market", player_market_router())
+        .layer(axum::middleware::from_fn_with_state(app_state.clone(), player_auth_middleware));
+
+    let app = Router::new()
+        .nest("/admin", admin_router)
+        .merge(player_router)
         .with_state(app_state);
 
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
