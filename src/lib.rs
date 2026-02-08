@@ -9,3 +9,4 @@ pub mod pulsar;
 pub mod routes;
 pub mod ship_lifecycle;
 pub mod state;
+pub mod trade_lifecycle;

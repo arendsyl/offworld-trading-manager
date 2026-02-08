@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::config::AppConfig;
 use crate::market::MarketState;
-use crate::models::{ConstructionProject, Coordinates, MassDriverConnection, PlanetStatus, Player, Ship};
+use crate::models::{ConstructionProject, Coordinates, MassDriverConnection, PlanetStatus, Player, Ship, TradeRequest};
 use crate::models::System;
 use crate::pulsar::PulsarManager;
 
@@ -16,6 +16,7 @@ pub struct AppState {
     pub players: Arc<RwLock<HashMap<String, Player>>>,
     pub ships: Arc<RwLock<HashMap<Uuid, Ship>>>,
     pub projects: Arc<RwLock<HashMap<Uuid, ConstructionProject>>>,
+    pub trade_requests: Arc<RwLock<HashMap<Uuid, TradeRequest>>>,
     pub market: Arc<RwLock<MarketState>>,
     pub pulsar: Option<Arc<PulsarManager>>,
     pub config: Arc<AppConfig>,
@@ -137,6 +138,7 @@ pub fn create_app_state() -> AppState {
         players: Arc::new(RwLock::new(HashMap::new())),
         ships: Arc::new(RwLock::new(HashMap::new())),
         projects: Arc::new(RwLock::new(HashMap::new())),
+        trade_requests: Arc::new(RwLock::new(HashMap::new())),
         market: Arc::new(RwLock::new(MarketState::new(1024))),
         pulsar: None,
         config: Arc::new(AppConfig::default()),
@@ -154,6 +156,7 @@ pub fn create_app_state_from_file<P: AsRef<Path>>(path: P) -> Result<AppState, B
         players: Arc::new(RwLock::new(players)),
         ships: Arc::new(RwLock::new(HashMap::new())),
         projects: Arc::new(RwLock::new(HashMap::new())),
+        trade_requests: Arc::new(RwLock::new(HashMap::new())),
         market: Arc::new(RwLock::new(MarketState::new(1024))),
         pulsar: None,
         config: Arc::new(AppConfig::default()),

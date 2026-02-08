@@ -10,6 +10,7 @@ mod market;
 mod trucking;
 mod construction;
 mod leaderboard;
+mod trade;
 
 pub use systems::{admin_systems_router, player_systems_router};
 pub use planets::{admin_planets_router, player_planets_router};
@@ -23,3 +24,4 @@ pub use market::player_market_router;
 pub use trucking::player_trucking_router;
 pub use construction::player_construction_router;
 pub use leaderboard::player_leaderboard_router;
+pub use trade::player_trade_router;

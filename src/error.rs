@@ -125,6 +125,24 @@ pub enum ConstructionError {
     NoDockingBayAvailable(String),
 }
 
+#[derive(Debug, Clone, Error)]
+pub enum TradeRequestError {
+    #[error("Trade request not found: {0}")]
+    RequestNotFound(String),
+    #[error("Planet is not connected: {0}")]
+    PlanetNotConnected(String),
+    #[error("Not the owner of the station on planet: {0}")]
+    NotStationOwner(String),
+    #[error("total_quantity is required for FixedRate mode")]
+    TotalQuantityRequired,
+    #[error("target_level is required for Threshold mode")]
+    TargetLevelRequired,
+    #[error("rate_per_tick must be greater than zero")]
+    ZeroRate,
+    #[error("Trade request is not active: {0}")]
+    RequestNotActive(String),
+}
+
 #[derive(Debug, Error)]
 pub enum AppError {
     #[error("System not found: {0}")]
@@ -177,6 +195,9 @@ pub enum AppError {
 
     #[error("{0}")]
     Construction(#[from] ConstructionError),
+
+    #[error("{0}")]
+    TradeRequest(#[from] TradeRequestError),
 
     #[error("Station has active ships and cannot be deleted: {0}")]
     StationHasActiveShips(String),
@@ -255,6 +276,18 @@ impl IntoResponse for AppError {
                     MarketError::NoMatchForMarketOrder => StatusCode::BAD_REQUEST,
                     MarketError::PriceRequired => StatusCode::BAD_REQUEST,
                     MarketError::StationNotFoundForOrder(_) => StatusCode::NOT_FOUND,
+                };
+                (status, self.to_string())
+            }
+            AppError::TradeRequest(e) => {
+                let status = match e {
+                    TradeRequestError::RequestNotFound(_) => StatusCode::NOT_FOUND,
+                    TradeRequestError::PlanetNotConnected(_) => StatusCode::BAD_REQUEST,
+                    TradeRequestError::NotStationOwner(_) => StatusCode::FORBIDDEN,
+                    TradeRequestError::TotalQuantityRequired => StatusCode::BAD_REQUEST,
+                    TradeRequestError::TargetLevelRequired => StatusCode::BAD_REQUEST,
+                    TradeRequestError::ZeroRate => StatusCode::BAD_REQUEST,
+                    TradeRequestError::RequestNotActive(_) => StatusCode::CONFLICT,
                 };
                 (status, self.to_string())
             }

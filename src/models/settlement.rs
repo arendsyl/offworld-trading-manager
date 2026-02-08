@@ -4,7 +4,10 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Economy {
-    // Placeholder for economic simulation
+    #[serde(default)]
+    pub supply: HashMap<String, u64>,
+    #[serde(default)]
+    pub demand: HashMap<String, u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

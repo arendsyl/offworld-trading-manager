@@ -9,6 +9,7 @@ mod player;
 mod ship;
 mod market;
 mod construction;
+mod trade_request;
 
 pub use settlement::*;
 pub use station::*;
@@ -21,3 +22,4 @@ pub use player::*;
 pub use ship::*;
 pub use market::*;
 pub use construction::*;
+pub use trade_request::*;

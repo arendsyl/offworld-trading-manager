@@ -158,6 +158,24 @@ impl Default for TruckingConfig {
     }
 }
 
+fn default_trade_tick_duration_secs() -> f64 {
+    5.0
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TradeConfig {
+    #[serde(default = "default_trade_tick_duration_secs")]
+    pub tick_duration_secs: f64,
+}
+
+impl Default for TradeConfig {
+    fn default() -> Self {
+        Self {
+            tick_duration_secs: default_trade_tick_duration_secs(),
+        }
+    }
+}
+
 fn default_admin_token() -> String {
     "admin-secret-token".to_string()
 }
@@ -301,6 +319,8 @@ pub struct AppConfig {
     pub admin: AdminConfig,
     #[serde(default)]
     pub construction: ConstructionConfig,
+    #[serde(default)]
+    pub trade: TradeConfig,
 }
 
 fn default_port() -> u16 {
@@ -320,6 +340,7 @@ impl Default for AppConfig {
             market: MarketConfig::default(),
             admin: AdminConfig::default(),
             construction: ConstructionConfig::default(),
+            trade: TradeConfig::default(),
         }
     }
 }
