@@ -15,9 +15,10 @@ use offworld_trading_manager::auth::{admin_auth_middleware, player_auth_middlewa
 use offworld_trading_manager::routes::{
     admin_connections_router, admin_planets_router, admin_players_router,
     admin_settlements_router, admin_stations_router, admin_systems_router,
-    player_market_router, player_planets_router, player_players_router,
-    player_settlements_router, player_ships_router, player_stations_router,
-    player_systems_router, player_trucking_router, space_elevator_router,
+    player_construction_router, player_market_router, player_planets_router,
+    player_players_router, player_settlements_router, player_ships_router,
+    player_stations_router, player_systems_router, player_trucking_router,
+    space_elevator_router,
 };
 use offworld_trading_manager::state::{self, AppState};
 
@@ -114,6 +115,7 @@ async fn main() {
         galaxy: galaxy.clone(),
         players: Arc::new(RwLock::new(players)),
         ships: Arc::new(RwLock::new(HashMap::new())),
+        projects: Arc::new(RwLock::new(HashMap::new())),
         market: Arc::new(RwLock::new(MarketState::new(trade_channel_capacity))),
         pulsar: pulsar.clone(),
         config: config.clone(),
@@ -156,6 +158,7 @@ async fn main() {
         .nest("/ships", player_ships_router())
         .nest("/trucking", player_trucking_router())
         .nest("/market", player_market_router())
+        .nest("/construction", player_construction_router())
         .layer(axum::middleware::from_fn_with_state(app_state.clone(), player_auth_middleware));
 
     let app = Router::new()

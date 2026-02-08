@@ -57,6 +57,8 @@ async fn setup_pulsar_test() -> (
                     owner_id: "test".to_string(),
                     inventory: Default::default(),
                     mass_driver: Some(MassDriver::new(4)),
+                    docking_bays: 2,
+                    max_storage: u64::MAX,
                 },
                 space_elevator: SpaceElevator {
                     warehouse: Warehouse {

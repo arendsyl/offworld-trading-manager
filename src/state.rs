@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::config::AppConfig;
 use crate::market::MarketState;
-use crate::models::{Coordinates, MassDriverConnection, PlanetStatus, Player, Ship};
+use crate::models::{ConstructionProject, Coordinates, MassDriverConnection, PlanetStatus, Player, Ship};
 use crate::models::System;
 use crate::pulsar::PulsarManager;
 
@@ -15,6 +15,7 @@ pub struct AppState {
     pub galaxy: Arc<RwLock<GalaxyState>>,
     pub players: Arc<RwLock<HashMap<String, Player>>>,
     pub ships: Arc<RwLock<HashMap<Uuid, Ship>>>,
+    pub projects: Arc<RwLock<HashMap<Uuid, ConstructionProject>>>,
     pub market: Arc<RwLock<MarketState>>,
     pub pulsar: Option<Arc<PulsarManager>>,
     pub config: Arc<AppConfig>,
@@ -55,6 +56,22 @@ impl GalaxyState {
                             station.owner_id.clone(),
                         ));
                     }
+                }
+            }
+        }
+        None
+    }
+
+    pub fn find_planet_status(&self, planet_id: &str) -> Option<(String, Coordinates, f64, &PlanetStatus)> {
+        for (system_name, system) in &self.systems {
+            for planet in &system.planets {
+                if planet.id == planet_id {
+                    return Some((
+                        system_name.clone(),
+                        system.coordinates.clone(),
+                        planet.distance_ua,
+                        &planet.status,
+                    ));
                 }
             }
         }
@@ -117,6 +134,7 @@ pub fn create_app_state() -> AppState {
         galaxy: create_galaxy_state(),
         players: Arc::new(RwLock::new(HashMap::new())),
         ships: Arc::new(RwLock::new(HashMap::new())),
+        projects: Arc::new(RwLock::new(HashMap::new())),
         market: Arc::new(RwLock::new(MarketState::new(1024))),
         pulsar: None,
         config: Arc::new(AppConfig::default()),
@@ -132,6 +150,7 @@ pub fn create_app_state_from_file<P: AsRef<Path>>(path: P) -> Result<AppState, B
         galaxy,
         players: Arc::new(RwLock::new(players)),
         ships: Arc::new(RwLock::new(HashMap::new())),
+        projects: Arc::new(RwLock::new(HashMap::new())),
         market: Arc::new(RwLock::new(MarketState::new(1024))),
         pulsar: None,
         config: Arc::new(AppConfig::default()),

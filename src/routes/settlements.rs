@@ -108,6 +108,7 @@ async fn create_or_update_settlement(
         name: payload.name,
         population: payload.population.unwrap_or(0),
         economy: Economy::default(),
+        founding_goods: Default::default(),
     };
 
     let (is_new, new_status) = match &planet.status {

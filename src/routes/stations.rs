@@ -92,6 +92,8 @@ async fn create_or_update_station(
         owner_id: payload.owner_id.clone(),
         inventory: Default::default(),
         mass_driver: None,
+        docking_bays: state.config.construction.initial_docking_bays,
+        max_storage: state.config.construction.initial_max_storage,
     };
 
     let (is_new, new_status) = match &planet.status {

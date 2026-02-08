@@ -8,6 +8,7 @@ mod mass_driver;
 mod player;
 mod ship;
 mod market;
+mod construction;
 
 pub use settlement::*;
 pub use station::*;
@@ -19,3 +20,4 @@ pub use mass_driver::*;
 pub use player::*;
 pub use ship::*;
 pub use market::*;
+pub use construction::*;

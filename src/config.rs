@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
@@ -186,6 +188,90 @@ impl Default for MarketConfig {
     }
 }
 
+fn default_station_install_fee() -> u64 { 5000 }
+fn default_station_install_goods() -> HashMap<String, u64> {
+    [("steel".into(), 100), ("electronics".into(), 50)].into()
+}
+fn default_settlement_found_fee() -> u64 { 10000 }
+fn default_settlement_found_goods() -> HashMap<String, u64> {
+    [("steel".into(), 200), ("electronics".into(), 100), ("food".into(), 50)].into()
+}
+fn default_upgrade_docking_bay_fee() -> u64 { 1000 }
+fn default_upgrade_docking_bay_goods() -> HashMap<String, u64> { HashMap::new() }
+fn default_upgrade_mass_driver_fee() -> u64 { 1500 }
+fn default_upgrade_mass_driver_goods() -> HashMap<String, u64> { HashMap::new() }
+fn default_upgrade_storage_fee() -> u64 { 500 }
+fn default_upgrade_storage_goods() -> HashMap<String, u64> { HashMap::new() }
+fn default_storage_increment() -> u64 { 500 }
+fn default_upgrade_cabin_fee() -> u64 { 2000 }
+fn default_upgrade_cabin_goods() -> HashMap<String, u64> { HashMap::new() }
+fn default_build_base_secs() -> f64 { 30.0 }
+fn default_upgrade_build_secs() -> f64 { 10.0 }
+fn default_initial_docking_bays() -> u32 { 2 }
+fn default_initial_max_storage() -> u64 { 10000 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConstructionConfig {
+    #[serde(default = "default_station_install_fee")]
+    pub station_install_fee: u64,
+    #[serde(default = "default_station_install_goods")]
+    pub station_install_goods: HashMap<String, u64>,
+    #[serde(default = "default_settlement_found_fee")]
+    pub settlement_found_fee: u64,
+    #[serde(default = "default_settlement_found_goods")]
+    pub settlement_found_goods: HashMap<String, u64>,
+    #[serde(default = "default_upgrade_docking_bay_fee")]
+    pub upgrade_docking_bay_fee: u64,
+    #[serde(default = "default_upgrade_docking_bay_goods")]
+    pub upgrade_docking_bay_goods: HashMap<String, u64>,
+    #[serde(default = "default_upgrade_mass_driver_fee")]
+    pub upgrade_mass_driver_fee: u64,
+    #[serde(default = "default_upgrade_mass_driver_goods")]
+    pub upgrade_mass_driver_goods: HashMap<String, u64>,
+    #[serde(default = "default_upgrade_storage_fee")]
+    pub upgrade_storage_fee: u64,
+    #[serde(default = "default_upgrade_storage_goods")]
+    pub upgrade_storage_goods: HashMap<String, u64>,
+    #[serde(default = "default_storage_increment")]
+    pub storage_increment: u64,
+    #[serde(default = "default_upgrade_cabin_fee")]
+    pub upgrade_cabin_fee: u64,
+    #[serde(default = "default_upgrade_cabin_goods")]
+    pub upgrade_cabin_goods: HashMap<String, u64>,
+    #[serde(default = "default_build_base_secs")]
+    pub build_base_secs: f64,
+    #[serde(default = "default_upgrade_build_secs")]
+    pub upgrade_build_secs: f64,
+    #[serde(default = "default_initial_docking_bays")]
+    pub initial_docking_bays: u32,
+    #[serde(default = "default_initial_max_storage")]
+    pub initial_max_storage: u64,
+}
+
+impl Default for ConstructionConfig {
+    fn default() -> Self {
+        Self {
+            station_install_fee: default_station_install_fee(),
+            station_install_goods: default_station_install_goods(),
+            settlement_found_fee: default_settlement_found_fee(),
+            settlement_found_goods: default_settlement_found_goods(),
+            upgrade_docking_bay_fee: default_upgrade_docking_bay_fee(),
+            upgrade_docking_bay_goods: default_upgrade_docking_bay_goods(),
+            upgrade_mass_driver_fee: default_upgrade_mass_driver_fee(),
+            upgrade_mass_driver_goods: default_upgrade_mass_driver_goods(),
+            upgrade_storage_fee: default_upgrade_storage_fee(),
+            upgrade_storage_goods: default_upgrade_storage_goods(),
+            storage_increment: default_storage_increment(),
+            upgrade_cabin_fee: default_upgrade_cabin_fee(),
+            upgrade_cabin_goods: default_upgrade_cabin_goods(),
+            build_base_secs: default_build_base_secs(),
+            upgrade_build_secs: default_upgrade_build_secs(),
+            initial_docking_bays: default_initial_docking_bays(),
+            initial_max_storage: default_initial_max_storage(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
     #[serde(default = "default_port")]
@@ -205,6 +291,8 @@ pub struct AppConfig {
     pub market: MarketConfig,
     #[serde(default)]
     pub admin: AdminConfig,
+    #[serde(default)]
+    pub construction: ConstructionConfig,
 }
 
 fn default_port() -> u16 {
@@ -223,6 +311,7 @@ impl Default for AppConfig {
             trucking: TruckingConfig::default(),
             market: MarketConfig::default(),
             admin: AdminConfig::default(),
+            construction: ConstructionConfig::default(),
         }
     }
 }

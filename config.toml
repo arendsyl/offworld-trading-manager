@@ -48,3 +48,26 @@ fee_per_unit = 1.0
 [market]
 # Broadcast channel capacity for SSE trade events
 trade_channel_capacity = 1024
+
+# Construction configuration
+[construction]
+station_install_fee = 5000
+settlement_found_fee = 10000
+upgrade_docking_bay_fee = 1000
+upgrade_mass_driver_fee = 1500
+upgrade_storage_fee = 500
+storage_increment = 500
+upgrade_cabin_fee = 2000
+build_base_secs = 30.0
+upgrade_build_secs = 10.0
+initial_docking_bays = 2
+initial_max_storage = 10000
+
+[construction.station_install_goods]
+steel = 100
+electronics = 50
+
+[construction.settlement_found_goods]
+steel = 200
+electronics = 100
+food = 50

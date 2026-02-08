@@ -89,6 +89,42 @@ pub enum TruckingError {
     DestinationStationNotFound(String),
 }
 
+#[derive(Debug, Clone, Error)]
+pub enum ConstructionError {
+    #[error("Insufficient credits: need {needed}, have {available}")]
+    InsufficientCredits { needed: u64, available: i64 },
+    #[error("Insufficient goods: {good_name} (need {requested}, have {available})")]
+    InsufficientGoods {
+        good_name: String,
+        requested: u64,
+        available: u64,
+    },
+    #[error("Source station not found: {0}")]
+    SourceStationNotFound(String),
+    #[error("Target planet not found: {0}")]
+    TargetPlanetNotFound(String),
+    #[error("Target planet is not settled: {0}")]
+    TargetNotSettled(String),
+    #[error("Target planet already has a station: {0}")]
+    TargetAlreadyConnected(String),
+    #[error("Target planet is not uninhabited: {0}")]
+    TargetNotUninhabited(String),
+    #[error("Not the owner of the source station")]
+    NotSourceStationOwner,
+    #[error("Not the owner of the target station")]
+    NotTargetStationOwner,
+    #[error("Station has no mass driver")]
+    NoMassDriver,
+    #[error("Construction project not found: {0}")]
+    ProjectNotFound(String),
+    #[error("Source and target cannot be the same planet")]
+    SamePlanet,
+    #[error("Storage full: current {current}, max {max}, incoming {incoming}")]
+    StorageFull { current: u64, max: u64, incoming: u64 },
+    #[error("No docking bay available at station: {0}")]
+    NoDockingBayAvailable(String),
+}
+
 #[derive(Debug, Error)]
 pub enum AppError {
     #[error("System not found: {0}")]
@@ -135,6 +171,9 @@ pub enum AppError {
 
     #[error("{0}")]
     Trucking(#[from] TruckingError),
+
+    #[error("{0}")]
+    Construction(#[from] ConstructionError),
 
     #[error("Station has active ships and cannot be deleted: {0}")]
     StationHasActiveShips(String),
@@ -212,6 +251,25 @@ impl IntoResponse for AppError {
                     MarketError::NoMatchForMarketOrder => StatusCode::BAD_REQUEST,
                     MarketError::PriceRequired => StatusCode::BAD_REQUEST,
                     MarketError::StationNotFoundForOrder(_) => StatusCode::NOT_FOUND,
+                };
+                (status, self.to_string())
+            }
+            AppError::Construction(e) => {
+                let status = match e {
+                    ConstructionError::InsufficientCredits { .. } => StatusCode::BAD_REQUEST,
+                    ConstructionError::InsufficientGoods { .. } => StatusCode::BAD_REQUEST,
+                    ConstructionError::SourceStationNotFound(_) => StatusCode::NOT_FOUND,
+                    ConstructionError::TargetPlanetNotFound(_) => StatusCode::NOT_FOUND,
+                    ConstructionError::TargetNotSettled(_) => StatusCode::BAD_REQUEST,
+                    ConstructionError::TargetAlreadyConnected(_) => StatusCode::CONFLICT,
+                    ConstructionError::TargetNotUninhabited(_) => StatusCode::BAD_REQUEST,
+                    ConstructionError::NotSourceStationOwner => StatusCode::FORBIDDEN,
+                    ConstructionError::NotTargetStationOwner => StatusCode::FORBIDDEN,
+                    ConstructionError::NoMassDriver => StatusCode::BAD_REQUEST,
+                    ConstructionError::ProjectNotFound(_) => StatusCode::NOT_FOUND,
+                    ConstructionError::SamePlanet => StatusCode::BAD_REQUEST,
+                    ConstructionError::StorageFull { .. } => StatusCode::BAD_REQUEST,
+                    ConstructionError::NoDockingBayAvailable(_) => StatusCode::SERVICE_UNAVAILABLE,
                 };
                 (status, self.to_string())
             }

@@ -201,8 +201,8 @@ async fn handle_packet(
     let latency_duration = std::time::Duration::from_secs_f64(latency_secs);
     tokio::time::sleep(latency_duration).await;
 
-    // Phase 3: Write lock — credit receiver
-    {
+    // Phase 3: Write lock — credit receiver (with storage check)
+    let storage_rejected = {
         let mut state = galaxy.write().await;
         let system = match state.systems.get_mut(&system_name) {
             Some(s) => s,
@@ -215,13 +215,53 @@ async fn handle_packet(
         };
 
         if let PlanetStatus::Connected { station, .. } = &mut to.status {
-            for item in &items {
-                *station
-                    .inventory
-                    .entry(item.good_name.clone())
-                    .or_insert(0) += item.quantity;
+            let current: u64 = station.inventory.values().sum();
+            let incoming: u64 = items.iter().map(|i| i.quantity).sum();
+            if current + incoming > station.max_storage {
+                true
+            } else {
+                for item in &items {
+                    *station
+                        .inventory
+                        .entry(item.good_name.clone())
+                        .or_insert(0) += item.quantity;
+                }
+                false
+            }
+        } else {
+            false
+        }
+    };
+
+    if storage_rejected {
+        // Return goods to sender
+        {
+            let mut state = galaxy.write().await;
+            let system = match state.systems.get_mut(&system_name) {
+                Some(s) => s,
+                None => return,
+            };
+            let from = match system.planets.iter_mut().find(|p| p.id == from_planet) {
+                Some(p) => p,
+                None => return,
+            };
+            if let PlanetStatus::Connected { station, .. } = &mut from.status {
+                for item in &items {
+                    *station
+                        .inventory
+                        .entry(item.good_name.clone())
+                        .or_insert(0) += item.quantity;
+                }
             }
         }
+        send_packet_rejected(
+            pulsar,
+            &from_owner_id,
+            connection_id,
+            "Destination station storage full",
+        )
+        .await;
+        return;
     }
 
     // Notify receiver

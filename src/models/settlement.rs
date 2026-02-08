@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -10,6 +12,8 @@ pub struct Settlement {
     pub name: String,
     pub population: u64,
     pub economy: Economy,
+    #[serde(default)]
+    pub founding_goods: HashMap<String, u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

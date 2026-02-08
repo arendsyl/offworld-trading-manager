@@ -8,7 +8,7 @@ use axum::{
 use tracing::{debug, info, warn, error, instrument};
 
 use crate::auth::AuthenticatedPlayer;
-use crate::error::AppError;
+use crate::error::{AppError, ConstructionError};
 use crate::models::{
     PlanetStatus, SpaceElevatorError, SpaceElevatorStatus, TransferDirection,
     TransferRequest, TransferResult,
@@ -160,6 +160,17 @@ async fn transfer(
                         debug!(direction = "ToSurface", "Reserved items from station inventory");
                     }
                     TransferDirection::ToOrbit => {
+                        // Storage capacity check: will station have room?
+                        let current: u64 = station.inventory.values().sum();
+                        if current + total_quantity > station.max_storage {
+                            return Err(ConstructionError::StorageFull {
+                                current,
+                                max: station.max_storage,
+                                incoming: total_quantity,
+                            }
+                            .into());
+                        }
+
                         // Warehouse -> Station: check warehouse inventory for all items
                         for item in &items {
                             let available = space_elevator.warehouse.inventory.get(&item.good_name).copied().unwrap_or(0);

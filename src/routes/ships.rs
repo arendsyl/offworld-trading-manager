@@ -8,7 +8,7 @@ use tracing::instrument;
 use uuid::Uuid;
 
 use crate::auth::AuthenticatedPlayer;
-use crate::error::{AppError, ShipError};
+use crate::error::{AppError, ConstructionError, ShipError};
 use crate::models::{
     DockRequest, PlanetStatus, Ship, ShipStatus, ShipWebhookPayload,
     UndockRequest,
@@ -170,6 +170,33 @@ async fn dock_ship(
             }
             // If trade ship (trade_id.is_some()): cargo was already reserved at sell-order time, no deduction
 
+            // Docking bay check
+            {
+                let galaxy = state.galaxy.read().await;
+                let ships = state.ships.read().await;
+                for system in galaxy.systems.values() {
+                    for planet in &system.planets {
+                        if planet.id == ship_snapshot.origin_planet_id {
+                            if let PlanetStatus::Connected { ref station, .. } = planet.status {
+                                let active_at_station = ships
+                                    .values()
+                                    .filter(|s| {
+                                        matches!(s.status, ShipStatus::Loading | ShipStatus::Unloading)
+                                            && s.origin_planet_id == ship_snapshot.origin_planet_id
+                                    })
+                                    .count() as u32;
+                                if active_at_station >= station.docking_bays {
+                                    return Err(ConstructionError::NoDockingBayAvailable(
+                                        ship_snapshot.origin_planet_id.clone(),
+                                    )
+                                    .into());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // Set status to Loading
             let total_cargo: u64 = ship_snapshot.cargo.values().sum();
             let operation_secs = total_cargo as f64 * state.config.trucking.seconds_per_unit;
@@ -227,6 +254,33 @@ async fn dock_ship(
                 }
                 if !is_owner {
                     return Err(ShipError::NotStationOwner.into());
+                }
+            }
+
+            // Docking bay check
+            {
+                let galaxy = state.galaxy.read().await;
+                let ships = state.ships.read().await;
+                for system in galaxy.systems.values() {
+                    for planet in &system.planets {
+                        if planet.id == ship_snapshot.destination_planet_id {
+                            if let PlanetStatus::Connected { ref station, .. } = planet.status {
+                                let active_at_station = ships
+                                    .values()
+                                    .filter(|s| {
+                                        matches!(s.status, ShipStatus::Loading | ShipStatus::Unloading)
+                                            && s.destination_planet_id == ship_snapshot.destination_planet_id
+                                    })
+                                    .count() as u32;
+                                if active_at_station >= station.docking_bays {
+                                    return Err(ConstructionError::NoDockingBayAvailable(
+                                        ship_snapshot.destination_planet_id.clone(),
+                                    )
+                                    .into());
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -414,6 +468,29 @@ async fn undock_ship(
                 }
                 if !is_owner {
                     return Err(ShipError::NotStationOwner.into());
+                }
+            }
+
+            // Storage capacity check before transferring cargo
+            {
+                let galaxy = state.galaxy.read().await;
+                for system in galaxy.systems.values() {
+                    for planet in &system.planets {
+                        if planet.id == ship_snapshot.destination_planet_id {
+                            if let PlanetStatus::Connected { ref station, .. } = planet.status {
+                                let current: u64 = station.inventory.values().sum();
+                                let incoming: u64 = ship_snapshot.cargo.values().sum();
+                                if current + incoming > station.max_storage {
+                                    return Err(ConstructionError::StorageFull {
+                                        current,
+                                        max: station.max_storage,
+                                        incoming,
+                                    }
+                                    .into());
+                                }
+                            }
+                        }
+                    }
                 }
             }
 

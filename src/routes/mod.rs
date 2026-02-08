@@ -8,6 +8,7 @@ mod players;
 mod ships;
 mod market;
 mod trucking;
+mod construction;
 
 pub use systems::{admin_systems_router, player_systems_router};
 pub use planets::{admin_planets_router, player_planets_router};
@@ -19,3 +20,4 @@ pub use players::{admin_players_router, player_players_router};
 pub use ships::player_ships_router;
 pub use market::player_market_router;
 pub use trucking::player_trucking_router;
+pub use construction::player_construction_router;

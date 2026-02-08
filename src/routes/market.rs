@@ -276,7 +276,7 @@ async fn place_order(
                 state.http_client.clone(),
             );
         } else {
-            // Same station: deliver immediately
+            // Same station: deliver immediately (skip storage check for same-station trades)
             {
                 let mut ships = state.ships.write().await;
                 if let Some(ship) = ships.get_mut(&ship_id) {
