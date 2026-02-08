@@ -10,7 +10,6 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use offworld_trading_manager::config::load_config;
 use offworld_trading_manager::consumer::spawn_send_consumer;
 use offworld_trading_manager::market::MarketState;
-use offworld_trading_manager::models::PlanetStatus;
 use offworld_trading_manager::pulsar::PulsarManager;
 use offworld_trading_manager::auth::{admin_auth_middleware, player_auth_middleware};
 use offworld_trading_manager::routes::{
@@ -121,23 +120,18 @@ async fn main() {
         http_client: reqwest::Client::new(),
     };
 
-    // Spawn consumers for existing Connected stations if Pulsar is available
+    // Spawn consumers for each player if Pulsar is available
     if let Some(ref pulsar) = pulsar {
-        let galaxy_read = galaxy.read().await;
-        for (system_name, system) in &galaxy_read.systems {
-            for planet in &system.planets {
-                if matches!(planet.status, PlanetStatus::Connected { .. }) {
-                    spawn_send_consumer(
-                        galaxy.clone(),
-                        pulsar.clone(),
-                        config.clone(),
-                        system_name.clone(),
-                        planet.id.clone(),
-                    );
-                }
-            }
+        let players_read = app_state.players.read().await;
+        for player_id in players_read.keys() {
+            spawn_send_consumer(
+                galaxy.clone(),
+                pulsar.clone(),
+                config.clone(),
+                player_id.clone(),
+            );
         }
-        drop(galaxy_read);
+        drop(players_read);
     }
 
     let admin_router = Router::new()

@@ -163,18 +163,19 @@ async fn create_connection(
         "Connection created (pending)"
     );
 
-    // Notify to_planet via Pulsar if available
+    // Notify to_planet owner via Pulsar if available
     if let Some(ref pulsar) = state.pulsar {
-        pulsar
-            .send_notification(
-                &payload.system,
-                &payload.to_planet,
-                &NotifyMessage::ConnectionRequest {
-                    connection_id: connection.id,
-                    from_planet: payload.from_planet.clone(),
-                },
-            )
-            .await;
+        if let Some(to_owner) = galaxy.resolve_planet_owner(&payload.system, &payload.to_planet) {
+            pulsar
+                .send_notification(
+                    &to_owner,
+                    &NotifyMessage::ConnectionRequest {
+                        connection_id: connection.id,
+                        from_planet: payload.from_planet.clone(),
+                    },
+                )
+                .await;
+        }
     }
 
     Ok((StatusCode::CREATED, Json(connection)))
@@ -271,15 +272,16 @@ async fn update_connection(
             info!(connection_id = %id, "Connection accepted");
 
             if let Some(ref pulsar) = state.pulsar {
-                pulsar
-                    .send_notification(
-                        &connection.system,
-                        &connection.from_planet,
-                        &NotifyMessage::ConnectionAccepted {
-                            connection_id: id,
-                        },
-                    )
-                    .await;
+                if let Some(from_owner) = galaxy.resolve_planet_owner(&connection.system, &connection.from_planet) {
+                    pulsar
+                        .send_notification(
+                            &from_owner,
+                            &NotifyMessage::ConnectionAccepted {
+                                connection_id: id,
+                            },
+                        )
+                        .await;
+                }
             }
 
             Ok(Json(updated))
@@ -296,15 +298,16 @@ async fn update_connection(
             info!(connection_id = %id, "Connection rejected");
 
             if let Some(ref pulsar) = state.pulsar {
-                pulsar
-                    .send_notification(
-                        &connection.system,
-                        &connection.from_planet,
-                        &NotifyMessage::ConnectionRejected {
-                            connection_id: id,
-                        },
-                    )
-                    .await;
+                if let Some(from_owner) = galaxy.resolve_planet_owner(&connection.system, &connection.from_planet) {
+                    pulsar
+                        .send_notification(
+                            &from_owner,
+                            &NotifyMessage::ConnectionRejected {
+                                connection_id: id,
+                            },
+                        )
+                        .await;
+                }
             }
 
             Ok(Json(updated))
@@ -322,26 +325,28 @@ async fn update_connection(
 
             if let Some(ref pulsar) = state.pulsar {
                 // Notify both parties
-                pulsar
-                    .send_notification(
-                        &connection.system,
-                        &connection.from_planet,
-                        &NotifyMessage::ConnectionClosed {
-                            connection_id: id,
-                            closed_by: "unknown".to_string(),
-                        },
-                    )
-                    .await;
-                pulsar
-                    .send_notification(
-                        &connection.system,
-                        &connection.to_planet,
-                        &NotifyMessage::ConnectionClosed {
-                            connection_id: id,
-                            closed_by: "unknown".to_string(),
-                        },
-                    )
-                    .await;
+                if let Some(from_owner) = galaxy.resolve_planet_owner(&connection.system, &connection.from_planet) {
+                    pulsar
+                        .send_notification(
+                            &from_owner,
+                            &NotifyMessage::ConnectionClosed {
+                                connection_id: id,
+                                closed_by: "unknown".to_string(),
+                            },
+                        )
+                        .await;
+                }
+                if let Some(to_owner) = galaxy.resolve_planet_owner(&connection.system, &connection.to_planet) {
+                    pulsar
+                        .send_notification(
+                            &to_owner,
+                            &NotifyMessage::ConnectionClosed {
+                                connection_id: id,
+                                closed_by: "unknown".to_string(),
+                            },
+                        )
+                        .await;
+                }
             }
 
             Ok(Json(updated))
@@ -366,26 +371,28 @@ async fn delete_connection(
     // If active, treat as close first
     if connection.status == ConnectionStatus::Active {
         if let Some(ref pulsar) = state.pulsar {
-            pulsar
-                .send_notification(
-                    &connection.system,
-                    &connection.from_planet,
-                    &NotifyMessage::ConnectionClosed {
-                        connection_id: id,
-                        closed_by: "delete".to_string(),
-                    },
-                )
-                .await;
-            pulsar
-                .send_notification(
-                    &connection.system,
-                    &connection.to_planet,
-                    &NotifyMessage::ConnectionClosed {
-                        connection_id: id,
-                        closed_by: "delete".to_string(),
-                    },
-                )
-                .await;
+            if let Some(from_owner) = galaxy.resolve_planet_owner(&connection.system, &connection.from_planet) {
+                pulsar
+                    .send_notification(
+                        &from_owner,
+                        &NotifyMessage::ConnectionClosed {
+                            connection_id: id,
+                            closed_by: "delete".to_string(),
+                        },
+                    )
+                    .await;
+            }
+            if let Some(to_owner) = galaxy.resolve_planet_owner(&connection.system, &connection.to_planet) {
+                pulsar
+                    .send_notification(
+                        &to_owner,
+                        &NotifyMessage::ConnectionClosed {
+                            connection_id: id,
+                            closed_by: "delete".to_string(),
+                        },
+                    )
+                    .await;
+            }
         }
     }
 

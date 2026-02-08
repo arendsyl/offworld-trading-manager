@@ -113,8 +113,7 @@ async fn test_pulsar_send_packet_transfers_inventory() {
         galaxy.clone(),
         pulsar.clone(),
         config.clone(),
-        "Sol".to_string(),
-        "Sol-3".to_string(),
+        "alpha-team".to_string(),
     );
 
     // Give consumer time to start
@@ -131,7 +130,7 @@ async fn test_pulsar_send_packet_transfers_inventory() {
     let payload = serde_json::to_vec(&msg).unwrap();
 
     // Produce directly to the send topic
-    let topic = pulsar.topic("send", "Sol", "Sol-3");
+    let topic = pulsar.topic("send", "alpha-team");
     let mut producer = pulsar
         .client
         .producer()
@@ -202,8 +201,7 @@ async fn test_pulsar_packet_rejected_oversized() {
         galaxy.clone(),
         pulsar.clone(),
         config.clone(),
-        "Sol".to_string(),
-        "Sol-3".to_string(),
+        "alpha-team".to_string(),
     );
 
     tokio::time::sleep(Duration::from_secs(1)).await;
@@ -218,7 +216,7 @@ async fn test_pulsar_packet_rejected_oversized() {
     };
     let payload = serde_json::to_vec(&msg).unwrap();
 
-    let topic = pulsar.topic("send", "Sol", "Sol-3");
+    let topic = pulsar.topic("send", "alpha-team");
     let mut producer = pulsar
         .client
         .producer()
@@ -268,8 +266,7 @@ async fn test_pulsar_packet_rejected_insufficient_inventory() {
         galaxy.clone(),
         pulsar.clone(),
         config.clone(),
-        "Sol".to_string(),
-        "Sol-3".to_string(),
+        "alpha-team".to_string(),
     );
 
     tokio::time::sleep(Duration::from_secs(1)).await;
@@ -283,7 +280,7 @@ async fn test_pulsar_packet_rejected_insufficient_inventory() {
     };
     let payload = serde_json::to_vec(&msg).unwrap();
 
-    let topic = pulsar.topic("send", "Sol", "Sol-3");
+    let topic = pulsar.topic("send", "alpha-team");
     let mut producer = pulsar
         .client
         .producer()
@@ -342,8 +339,7 @@ async fn test_pulsar_packet_rejected_inactive_connection() {
         galaxy.clone(),
         pulsar.clone(),
         config.clone(),
-        "Sol".to_string(),
-        "Sol-3".to_string(),
+        "alpha-team".to_string(),
     );
 
     tokio::time::sleep(Duration::from_secs(1)).await;
@@ -357,7 +353,7 @@ async fn test_pulsar_packet_rejected_inactive_connection() {
     };
     let payload = serde_json::to_vec(&msg).unwrap();
 
-    let topic = pulsar.topic("send", "Sol", "Sol-3");
+    let topic = pulsar.topic("send", "alpha-team");
     let mut producer = pulsar
         .client
         .producer()

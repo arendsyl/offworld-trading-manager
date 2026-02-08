@@ -42,6 +42,15 @@ impl GalaxyState {
             connections: HashMap::new(),
         }
     }
+
+    pub fn resolve_planet_owner(&self, system_name: &str, planet_id: &str) -> Option<String> {
+        let system = self.systems.get(system_name)?;
+        let planet = system.planets.iter().find(|p| p.id == planet_id)?;
+        match &planet.status {
+            PlanetStatus::Connected { station, .. } => Some(station.owner_id.clone()),
+            _ => None,
+        }
+    }
 }
 
 /// Load GalaxyState from a JSON file

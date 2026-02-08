@@ -34,15 +34,15 @@ impl PulsarManager {
         })
     }
 
-    pub fn topic(&self, prefix: &str, system: &str, planet: &str) -> String {
+    pub fn topic(&self, prefix: &str, player_id: &str) -> String {
         format!(
-            "persistent://{}/{}/{}.{}.{}",
-            self.config.tenant, self.config.namespace, prefix, system, planet
+            "persistent://{}/{}/mass-driver.{}.{}",
+            self.config.tenant, self.config.namespace, prefix, player_id
         )
     }
 
-    pub async fn send_notification(&self, system: &str, planet: &str, msg: &NotifyMessage) {
-        let topic = self.topic("notify", system, planet);
+    pub async fn send_notification(&self, player_id: &str, msg: &NotifyMessage) {
+        let topic = self.topic("receive", player_id);
         let payload = match serde_json::to_vec(msg) {
             Ok(p) => p,
             Err(e) => {
@@ -77,11 +77,10 @@ impl PulsarManager {
 
     pub async fn create_send_consumer(
         &self,
-        system: &str,
-        planet: &str,
+        player_id: &str,
     ) -> Result<pulsar::consumer::Consumer<Vec<u8>, TokioExecutor>, pulsar::Error> {
-        let topic = self.topic("send", system, planet);
-        let subscription = format!("otm-send-{}-{}", system, planet);
+        let topic = self.topic("send", player_id);
+        let subscription = format!("otm-mass-driver-send-{}", player_id);
         self.client
             .consumer()
             .with_topic(&topic)
