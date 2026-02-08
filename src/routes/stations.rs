@@ -8,6 +8,7 @@ use tracing::{debug, info, warn, instrument};
 
 use uuid::Uuid;
 
+use crate::auth::AuthenticatedPlayer;
 use crate::error::AppError;
 use crate::models::{
     Cabin, CreateStationRequest, MassDriver, Order, OrderSide, OrderStatus, PlanetStatus,
@@ -27,8 +28,45 @@ pub fn admin_stations_router() -> Router<AppState> {
 pub fn player_stations_router() -> Router<AppState> {
     Router::new().route(
         "/{system_name}/{planet_id}/station",
-        get(get_station),
+        get(get_station_for_player),
     )
+}
+
+#[instrument(skip(state, auth))]
+async fn get_station_for_player(
+    State(state): State<AppState>,
+    auth: AuthenticatedPlayer,
+    Path((system_name, planet_id)): Path<(String, String)>,
+) -> Result<Json<Station>, AppError> {
+    debug!("Getting station for player");
+    let galaxy = state.galaxy.read().await;
+
+    let system = galaxy
+        .systems
+        .get(&system_name)
+        .ok_or_else(|| AppError::SystemNotFound(system_name.clone()))?;
+
+    let planet = system
+        .planets
+        .iter()
+        .find(|p| p.id == planet_id)
+        .ok_or_else(|| AppError::PlanetNotFound(planet_id.clone()))?;
+
+    match &planet.status {
+        PlanetStatus::Connected { station, .. } => {
+            if station.owner_id != auth.0.id {
+                return Err(AppError::Forbidden);
+            }
+            debug!(planet_id = %planet_id, station_name = %station.name, "Station found");
+            Ok(Json(station.clone()))
+        }
+        PlanetStatus::Settled { .. } => {
+            Err(AppError::StationNotFound(planet_id))
+        }
+        PlanetStatus::Uninhabited => {
+            Err(AppError::SettlementNotFound(planet_id))
+        }
+    }
 }
 
 #[instrument(skip(state))]

@@ -579,7 +579,8 @@ async fn test_list_ships_with_filter() {
     let ships: Vec<Ship> = serde_json::from_slice(&body).unwrap();
     assert_eq!(ships.len(), 1);
 
-    // List with nonexistent player
+    // player_id param is ignored; auth enforces ownership filtering
+    // Alpha still sees their own ships regardless of player_id param
     let app = common::build_router(state.clone());
     let response = app
         .oneshot(
@@ -594,5 +595,5 @@ async fn test_list_ships_with_filter() {
 
     let body = response.into_body().collect().await.unwrap().to_bytes();
     let ships: Vec<Ship> = serde_json::from_slice(&body).unwrap();
-    assert_eq!(ships.len(), 0);
+    assert_eq!(ships.len(), 1);
 }

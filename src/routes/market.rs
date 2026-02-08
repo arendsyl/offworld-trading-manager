@@ -337,9 +337,10 @@ async fn list_orders(
     Json(orders)
 }
 
-#[instrument(skip(state))]
+#[instrument(skip(state, auth))]
 async fn get_order(
     State(state): State<AppState>,
+    auth: AuthenticatedPlayer,
     Path(order_id): Path<Uuid>,
 ) -> Result<Json<Order>, AppError> {
     let market = state.market.read().await;
@@ -348,6 +349,9 @@ async fn get_order(
         .get(&order_id)
         .cloned()
         .ok_or_else(|| MarketError::OrderNotFound(order_id.to_string()))?;
+    if order.player_id != auth.0.id {
+        return Err(AppError::Forbidden);
+    }
     Ok(Json(order))
 }
 

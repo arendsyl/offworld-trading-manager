@@ -28,7 +28,6 @@ pub fn player_ships_router() -> Router<AppState> {
 
 #[derive(Debug, Deserialize)]
 struct ShipQuery {
-    player_id: Option<String>,
     status: Option<String>,
 }
 
@@ -39,19 +38,18 @@ fn now_ms() -> u64 {
         .as_millis() as u64
 }
 
-#[instrument(skip(state))]
+#[instrument(skip(state, auth))]
 async fn list_ships(
     State(state): State<AppState>,
+    auth: AuthenticatedPlayer,
     Query(query): Query<ShipQuery>,
 ) -> Json<Vec<Ship>> {
     let ships = state.ships.read().await;
     let result: Vec<Ship> = ships
         .values()
         .filter(|s| {
-            if let Some(ref pid) = query.player_id {
-                if s.owner_id != *pid {
-                    return false;
-                }
+            if s.owner_id != auth.0.id {
+                return false;
             }
             if let Some(ref status_str) = query.status {
                 let status_json = format!("\"{}\"", status_str);
@@ -67,15 +65,36 @@ async fn list_ships(
     Json(result)
 }
 
-#[instrument(skip(state))]
+#[instrument(skip(state, auth))]
 async fn get_ship(
     State(state): State<AppState>,
+    auth: AuthenticatedPlayer,
     Path(ship_id): Path<Uuid>,
 ) -> Result<Json<Ship>, AppError> {
     let mut ships = state.ships.write().await;
     let ship = ships
         .get_mut(&ship_id)
         .ok_or_else(|| ShipError::ShipNotFound(ship_id.to_string()))?;
+
+    // Allow access if caller owns the ship or owns the origin/destination station
+    if ship.owner_id != auth.0.id {
+        let galaxy = state.galaxy.read().await;
+        let mut is_station_owner = false;
+        for system in galaxy.systems.values() {
+            for planet in &system.planets {
+                if planet.id == ship.origin_planet_id || planet.id == ship.destination_planet_id {
+                    if let PlanetStatus::Connected { ref station, .. } = planet.status {
+                        if station.owner_id == auth.0.id {
+                            is_station_owner = true;
+                        }
+                    }
+                }
+            }
+        }
+        if !is_station_owner {
+            return Err(AppError::Forbidden);
+        }
+    }
 
     let now = now_ms();
     if let Some(complete_at) = ship.operation_complete_at {

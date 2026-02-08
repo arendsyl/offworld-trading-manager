@@ -19,7 +19,7 @@ pub fn admin_players_router() -> Router<AppState> {
 
 pub fn player_players_router() -> Router<AppState> {
     Router::new()
-        .route("/{player_id}", get(get_player).put(update_player))
+        .route("/{player_id}", get(get_player_for_player).put(update_player))
 }
 
 #[instrument(skip(state))]
@@ -34,6 +34,22 @@ async fn get_player(
     State(state): State<AppState>,
     Path(player_id): Path<String>,
 ) -> Result<Json<PlayerPublic>, AppError> {
+    let players = state.players.read().await;
+    let player = players
+        .get(&player_id)
+        .ok_or_else(|| AppError::PlayerNotFound(player_id))?;
+    Ok(Json(PlayerPublic::from(player)))
+}
+
+#[instrument(skip(state, auth))]
+async fn get_player_for_player(
+    State(state): State<AppState>,
+    auth: AuthenticatedPlayer,
+    Path(player_id): Path<String>,
+) -> Result<Json<PlayerPublic>, AppError> {
+    if auth.0.id != player_id {
+        return Err(AppError::Forbidden);
+    }
     let players = state.players.read().await;
     let player = players
         .get(&player_id)
