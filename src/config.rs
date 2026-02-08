@@ -103,6 +103,59 @@ pub struct MarketConfig {
     pub trade_channel_capacity: usize,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TruckingConfig {
+    #[serde(default = "default_trucking_jump_range_ly")]
+    pub jump_range_ly: f64,
+    #[serde(default = "default_trucking_jump_time_secs")]
+    pub jump_time_secs: f64,
+    #[serde(default = "default_trucking_au_to_seconds")]
+    pub au_to_seconds: f64,
+    #[serde(default = "default_trucking_seconds_per_unit")]
+    pub seconds_per_unit: f64,
+    #[serde(default = "default_trucking_base_fee")]
+    pub base_fee: u64,
+    #[serde(default = "default_trucking_fee_per_unit")]
+    pub fee_per_unit: f64,
+}
+
+fn default_trucking_jump_range_ly() -> f64 {
+    5.0
+}
+
+fn default_trucking_jump_time_secs() -> f64 {
+    3.0
+}
+
+fn default_trucking_au_to_seconds() -> f64 {
+    2.0
+}
+
+fn default_trucking_seconds_per_unit() -> f64 {
+    0.1
+}
+
+fn default_trucking_base_fee() -> u64 {
+    100
+}
+
+fn default_trucking_fee_per_unit() -> f64 {
+    1.0
+}
+
+impl Default for TruckingConfig {
+    fn default() -> Self {
+        Self {
+            jump_range_ly: default_trucking_jump_range_ly(),
+            jump_time_secs: default_trucking_jump_time_secs(),
+            au_to_seconds: default_trucking_au_to_seconds(),
+            seconds_per_unit: default_trucking_seconds_per_unit(),
+            base_fee: default_trucking_base_fee(),
+            fee_per_unit: default_trucking_fee_per_unit(),
+        }
+    }
+}
+
 fn default_admin_token() -> String {
     "admin-secret-token".to_string()
 }
@@ -147,6 +200,8 @@ pub struct AppConfig {
     #[serde(default)]
     pub ship: ShipConfig,
     #[serde(default)]
+    pub trucking: TruckingConfig,
+    #[serde(default)]
     pub market: MarketConfig,
     #[serde(default)]
     pub admin: AdminConfig,
@@ -165,6 +220,7 @@ impl Default for AppConfig {
             pulsar: PulsarConfig::default(),
             mass_driver: MassDriverDefaults::default(),
             ship: ShipConfig::default(),
+            trucking: TruckingConfig::default(),
             market: MarketConfig::default(),
             admin: AdminConfig::default(),
         }

@@ -22,7 +22,7 @@ use crate::models::{
     Order, OrderBookSummary, OrderSide, OrderStatus, OrderType, PlaceOrderRequest,
     PlanetStatus, Ship, ShipStatus,
 };
-use crate::ship_lifecycle::spawn_ship_transit;
+use crate::ship_lifecycle::{calculate_sol_to_planet_time, spawn_transit_to_origin};
 use crate::state::AppState;
 
 pub fn player_market_router() -> Router<AppState> {
@@ -216,34 +216,7 @@ async fn place_order(
             }
         }
 
-        // Spawn ship from seller's station to buyer's station
-        let (transit_secs, callback_url) = {
-            let galaxy = state.galaxy.read().await;
-            let mut seller_dist = 0.0f64;
-            let mut buyer_dist = 0.0f64;
-
-            for system in galaxy.systems.values() {
-                for planet in &system.planets {
-                    if planet.id == trade.seller_station {
-                        seller_dist = planet.distance_ua;
-                    }
-                    if planet.id == trade.buyer_station {
-                        buyer_dist = planet.distance_ua;
-                    }
-                }
-            }
-
-            let transit = (seller_dist - buyer_dist).abs() * state.config.ship.au_to_seconds;
-
-            let players = state.players.read().await;
-            let callback = players
-                .get(&trade.buyer_id)
-                .map(|p| p.callback_url.clone())
-                .unwrap_or_default();
-
-            (transit, callback)
-        };
-
+        // Spawn ship from Sol to seller's station (two-leg lifecycle)
         let mut cargo = HashMap::new();
         cargo.insert(trade.good_name.clone(), trade.quantity);
 
@@ -253,8 +226,10 @@ async fn place_order(
             origin_planet_id: trade.seller_station.clone(),
             destination_planet_id: trade.buyer_station.clone(),
             cargo,
-            status: ShipStatus::InTransit,
+            status: ShipStatus::InTransitToOrigin,
             trade_id: Some(trade.id),
+            trucking_id: None,
+            fee: None,
             created_at: now_ms(),
             arrival_at: None,
             operation_complete_at: None,
@@ -267,12 +242,37 @@ async fn place_order(
         }
 
         if trade.seller_station != trade.buyer_station {
-            spawn_ship_transit(
+            // Calculate Sol → seller travel time and spawn transit to origin
+            let (transit_secs, seller_callback_url) = {
+                let galaxy = state.galaxy.read().await;
+                let seller_info = galaxy.find_planet_info(&trade.seller_station);
+
+                let transit = match seller_info {
+                    Some((_, ref coords, au, _)) => {
+                        calculate_sol_to_planet_time(coords, au, &state.config.trucking)
+                    }
+                    None => 0.0,
+                };
+
+                let seller_owner = seller_info
+                    .map(|(_, _, _, owner)| owner)
+                    .unwrap_or_default();
+
+                let players = state.players.read().await;
+                let callback = players
+                    .get(&seller_owner)
+                    .map(|p| p.callback_url.clone())
+                    .unwrap_or_default();
+
+                (transit, callback)
+            };
+
+            spawn_transit_to_origin(
                 state.ships.clone(),
                 ship_id,
                 transit_secs,
-                callback_url,
-                state.config.ship.clone(),
+                seller_callback_url,
+                state.config.ship.webhook_timeout_secs,
                 state.http_client.clone(),
             );
         } else {

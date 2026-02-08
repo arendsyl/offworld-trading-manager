@@ -75,6 +75,20 @@ pub enum MarketError {
     StationNotFoundForOrder(String),
 }
 
+#[derive(Debug, Clone, Error)]
+pub enum TruckingError {
+    #[error("Cannot truck to the same station")]
+    SameStation,
+    #[error("Not the owner of the origin station")]
+    NotOriginStationOwner,
+    #[error("Insufficient credits: need {needed}, have {available}")]
+    InsufficientCredits { needed: u64, available: i64 },
+    #[error("Origin station not found: {0}")]
+    OriginStationNotFound(String),
+    #[error("Destination station not found: {0}")]
+    DestinationStationNotFound(String),
+}
+
 #[derive(Debug, Error)]
 pub enum AppError {
     #[error("System not found: {0}")]
@@ -118,6 +132,9 @@ pub enum AppError {
 
     #[error("{0}")]
     Market(#[from] MarketError),
+
+    #[error("{0}")]
+    Trucking(#[from] TruckingError),
 
     #[error("Station has active ships and cannot be deleted: {0}")]
     StationHasActiveShips(String),
@@ -176,6 +193,16 @@ impl IntoResponse for AppError {
                 (status, self.to_string())
             }
             AppError::StationHasActiveShips(_) => (StatusCode::CONFLICT, self.to_string()),
+            AppError::Trucking(e) => {
+                let status = match e {
+                    TruckingError::SameStation => StatusCode::BAD_REQUEST,
+                    TruckingError::NotOriginStationOwner => StatusCode::FORBIDDEN,
+                    TruckingError::InsufficientCredits { .. } => StatusCode::BAD_REQUEST,
+                    TruckingError::OriginStationNotFound(_) => StatusCode::NOT_FOUND,
+                    TruckingError::DestinationStationNotFound(_) => StatusCode::NOT_FOUND,
+                };
+                (status, self.to_string())
+            }
             AppError::Market(e) => {
                 let status = match e {
                     MarketError::InsufficientCredits { .. } => StatusCode::BAD_REQUEST,

@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::config::AppConfig;
 use crate::market::MarketState;
-use crate::models::{MassDriverConnection, PlanetStatus, Player, Ship};
+use crate::models::{Coordinates, MassDriverConnection, PlanetStatus, Player, Ship};
 use crate::models::System;
 use crate::pulsar::PulsarManager;
 
@@ -41,6 +41,24 @@ impl GalaxyState {
             systems: HashMap::new(),
             connections: HashMap::new(),
         }
+    }
+
+    pub fn find_planet_info(&self, planet_id: &str) -> Option<(String, Coordinates, f64, String)> {
+        for (system_name, system) in &self.systems {
+            for planet in &system.planets {
+                if planet.id == planet_id {
+                    if let PlanetStatus::Connected { ref station, .. } = planet.status {
+                        return Some((
+                            system_name.clone(),
+                            system.coordinates.clone(),
+                            planet.distance_ua,
+                            station.owner_id.clone(),
+                        ));
+                    }
+                }
+            }
+        }
+        None
     }
 
     pub fn resolve_planet_owner(&self, system_name: &str, planet_id: &str) -> Option<String> {

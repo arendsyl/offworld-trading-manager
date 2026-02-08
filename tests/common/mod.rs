@@ -9,7 +9,7 @@ use offworld_trading_manager::routes::{
     admin_settlements_router, admin_stations_router, admin_systems_router,
     player_market_router, player_planets_router, player_players_router,
     player_settlements_router, player_ships_router, player_stations_router,
-    player_systems_router, space_elevator_router,
+    player_systems_router, player_trucking_router, space_elevator_router,
 };
 use offworld_trading_manager::state::{self, AppState};
 
@@ -60,6 +60,7 @@ pub fn build_router(state: AppState) -> Router {
         )
         .nest("/players", player_players_router())
         .nest("/ships", player_ships_router())
+        .nest("/trucking", player_trucking_router())
         .nest("/market", player_market_router())
         .layer(axum::middleware::from_fn_with_state(state.clone(), player_auth_middleware));
 

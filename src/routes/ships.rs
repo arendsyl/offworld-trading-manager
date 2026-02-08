@@ -1,7 +1,6 @@
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
-    routing::{get, post, put},
+    routing::{get, put},
     Json, Router,
 };
 use serde::Deserialize;
@@ -11,15 +10,17 @@ use uuid::Uuid;
 use crate::auth::AuthenticatedPlayer;
 use crate::error::{AppError, ShipError};
 use crate::models::{
-    CreateShipRequest, DockRequest, PlanetStatus, Ship, ShipStatus, ShipWebhookPayload,
+    DockRequest, PlanetStatus, Ship, ShipStatus, ShipWebhookPayload,
     UndockRequest,
 };
-use crate::ship_lifecycle::{send_ship_webhook, spawn_ship_transit};
+use crate::ship_lifecycle::{
+    calculate_travel_time, send_ship_webhook, spawn_ship_transit,
+};
 use crate::state::AppState;
 
 pub fn player_ships_router() -> Router<AppState> {
     Router::new()
-        .route("/", post(create_ship).get(list_ships))
+        .route("/", get(list_ships))
         .route("/{ship_id}", get(get_ship))
         .route("/{ship_id}/dock", put(dock_ship))
         .route("/{ship_id}/undock", put(undock_ship))
@@ -36,128 +37,6 @@ fn now_ms() -> u64 {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_millis() as u64
-}
-
-#[instrument(skip(state, auth))]
-async fn create_ship(
-    State(state): State<AppState>,
-    auth: AuthenticatedPlayer,
-    Json(body): Json<CreateShipRequest>,
-) -> Result<(StatusCode, Json<Ship>), AppError> {
-    if body.origin_planet_id == body.destination_planet_id {
-        return Err(ShipError::SameStation.into());
-    }
-
-    // Validate and deduct cargo in a single write lock
-    let (origin_dist, dest_dist, dest_owner_id) = {
-        let mut galaxy = state.galaxy.write().await;
-
-        let mut origin_distance = None;
-        let mut dest_distance = None;
-        let mut dest_owner = String::new();
-
-        // First pass: validate both planets
-        for system in galaxy.systems.values() {
-            for planet in &system.planets {
-                if planet.id == body.origin_planet_id {
-                    if let PlanetStatus::Connected { ref station, .. } = planet.status {
-                        if station.owner_id != auth.0.id {
-                            return Err(ShipError::NotStationOwner.into());
-                        }
-                        // Validate cargo availability
-                        for (good, &qty) in &body.cargo {
-                            let available = station.inventory.get(good).copied().unwrap_or(0);
-                            if available < qty {
-                                return Err(ShipError::InsufficientCargo {
-                                    good_name: good.clone(),
-                                    requested: qty,
-                                    available,
-                                }
-                                .into());
-                            }
-                        }
-                        origin_distance = Some(planet.distance_ua);
-                    } else {
-                        return Err(AppError::NotConnected(body.origin_planet_id.clone()));
-                    }
-                }
-                if planet.id == body.destination_planet_id {
-                    if let PlanetStatus::Connected { ref station, .. } = planet.status {
-                        dest_distance = Some(planet.distance_ua);
-                        dest_owner = station.owner_id.clone();
-                    } else {
-                        return Err(AppError::NotConnected(body.destination_planet_id.clone()));
-                    }
-                }
-            }
-        }
-
-        let o_dist = origin_distance
-            .ok_or_else(|| AppError::PlanetNotFound(body.origin_planet_id.clone()))?;
-        let d_dist = dest_distance
-            .ok_or_else(|| AppError::PlanetNotFound(body.destination_planet_id.clone()))?;
-
-        // Deduct cargo from origin station
-        for system in galaxy.systems.values_mut() {
-            for planet in &mut system.planets {
-                if planet.id == body.origin_planet_id {
-                    if let PlanetStatus::Connected { ref mut station, .. } = planet.status {
-                        for (good, &qty) in &body.cargo {
-                            let entry = station.inventory.entry(good.clone()).or_insert(0);
-                            *entry -= qty;
-                            if *entry == 0 {
-                                station.inventory.remove(good);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        (o_dist, d_dist, dest_owner)
-    };
-
-    let transit_secs = (origin_dist - dest_dist).abs() * state.config.ship.au_to_seconds;
-
-    let callback_url = {
-        let players = state.players.read().await;
-        players
-            .get(&dest_owner_id)
-            .map(|p| p.callback_url.clone())
-            .unwrap_or_default()
-    };
-
-    let ship = Ship {
-        id: Uuid::new_v4(),
-        owner_id: auth.0.id.clone(),
-        origin_planet_id: body.origin_planet_id,
-        destination_planet_id: body.destination_planet_id,
-        cargo: body.cargo,
-        status: ShipStatus::InTransit,
-        trade_id: None,
-        created_at: now_ms(),
-        arrival_at: None,
-        operation_complete_at: None,
-    };
-
-    let ship_id = ship.id;
-    let ship_clone = ship.clone();
-
-    {
-        let mut ships = state.ships.write().await;
-        ships.insert(ship_id, ship_clone);
-    }
-
-    spawn_ship_transit(
-        state.ships.clone(),
-        ship_id,
-        transit_secs,
-        callback_url,
-        state.config.ship.clone(),
-        state.http_client.clone(),
-    );
-
-    Ok((StatusCode::CREATED, Json(ship)))
 }
 
 #[instrument(skip(state))]
@@ -193,17 +72,22 @@ async fn get_ship(
     State(state): State<AppState>,
     Path(ship_id): Path<Uuid>,
 ) -> Result<Json<Ship>, AppError> {
-    // Polling drives state: check if operation_complete_at has passed
     let mut ships = state.ships.write().await;
     let ship = ships
         .get_mut(&ship_id)
         .ok_or_else(|| ShipError::ShipNotFound(ship_id.to_string()))?;
 
     let now = now_ms();
-    if matches!(ship.status, ShipStatus::Loading | ShipStatus::Unloading) {
-        if let Some(complete_at) = ship.operation_complete_at {
-            if now >= complete_at {
-                ship.status = ShipStatus::AwaitingUndockingAuth;
+    if let Some(complete_at) = ship.operation_complete_at {
+        if now >= complete_at {
+            match ship.status {
+                ShipStatus::Loading => {
+                    ship.status = ShipStatus::AwaitingOriginUndockingAuth;
+                }
+                ShipStatus::Unloading => {
+                    ship.status = ShipStatus::AwaitingUndockingAuth;
+                }
+                _ => {}
             }
         }
     }
@@ -222,80 +106,176 @@ async fn dock_ship(
         return Err(ShipError::InvalidShipState.into());
     }
 
-    // Verify auth player owns the destination station
-    {
+    let ship_snapshot = {
         let ships = state.ships.read().await;
-        let ship = ships
+        ships
             .get(&ship_id)
-            .ok_or_else(|| ShipError::ShipNotFound(ship_id.to_string()))?;
+            .ok_or_else(|| ShipError::ShipNotFound(ship_id.to_string()))?
+            .clone()
+    };
 
-        let galaxy = state.galaxy.read().await;
-        let mut is_owner = false;
-        for system in galaxy.systems.values() {
-            for planet in &system.planets {
-                if planet.id == ship.destination_planet_id {
-                    if let PlanetStatus::Connected { ref station, .. } = planet.status {
-                        if station.owner_id == auth.0.id {
-                            is_owner = true;
+    match ship_snapshot.status {
+        ShipStatus::AwaitingOriginDockingAuth => {
+            // Origin docking: verify caller owns the origin station
+            {
+                let galaxy = state.galaxy.read().await;
+                let mut is_owner = false;
+                for system in galaxy.systems.values() {
+                    for planet in &system.planets {
+                        if planet.id == ship_snapshot.origin_planet_id {
+                            if let PlanetStatus::Connected { ref station, .. } = planet.status {
+                                if station.owner_id == auth.0.id {
+                                    is_owner = true;
+                                }
+                            }
+                        }
+                    }
+                }
+                if !is_owner {
+                    return Err(ShipError::NotStationOwner.into());
+                }
+            }
+
+            // If trucking ship: validate & deduct cargo from origin station
+            if ship_snapshot.trucking_id.is_some() {
+                let mut galaxy = state.galaxy.write().await;
+                for system in galaxy.systems.values_mut() {
+                    for planet in &mut system.planets {
+                        if planet.id == ship_snapshot.origin_planet_id {
+                            if let PlanetStatus::Connected { ref mut station, .. } = planet.status {
+                                // Validate cargo availability
+                                for (good, &qty) in &ship_snapshot.cargo {
+                                    let available = station.inventory.get(good).copied().unwrap_or(0);
+                                    if available < qty {
+                                        return Err(ShipError::InsufficientCargo {
+                                            good_name: good.clone(),
+                                            requested: qty,
+                                            available,
+                                        }
+                                        .into());
+                                    }
+                                }
+                                // Deduct cargo
+                                for (good, &qty) in &ship_snapshot.cargo {
+                                    let entry = station.inventory.entry(good.clone()).or_insert(0);
+                                    *entry -= qty;
+                                    if *entry == 0 {
+                                        station.inventory.remove(good);
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
+            // If trade ship (trade_id.is_some()): cargo was already reserved at sell-order time, no deduction
+
+            // Set status to Loading
+            let total_cargo: u64 = ship_snapshot.cargo.values().sum();
+            let operation_secs = total_cargo as f64 * state.config.trucking.seconds_per_unit;
+            let now = now_ms();
+            let complete_at = now + (operation_secs * 1000.0) as u64;
+
+            let ship_result = {
+                let mut ships = state.ships.write().await;
+                let ship = ships
+                    .get_mut(&ship_id)
+                    .ok_or_else(|| ShipError::ShipNotFound(ship_id.to_string()))?;
+                ship.status = ShipStatus::Loading;
+                ship.operation_complete_at = Some(complete_at);
+                ship.clone()
+            };
+
+            // Send ShipDocked webhook
+            let callback_url = {
+                let players = state.players.read().await;
+                players
+                    .get(&ship_result.owner_id)
+                    .map(|p| p.callback_url.clone())
+                    .unwrap_or_default()
+            };
+            let payload = ShipWebhookPayload::ShipDocked {
+                ship_id,
+                status: "loading".to_string(),
+            };
+            send_ship_webhook(
+                &state.http_client,
+                &callback_url,
+                &payload,
+                state.config.ship.webhook_timeout_secs,
+                ship_id,
+            )
+            .await;
+
+            Ok(Json(ship_result))
         }
-        if !is_owner {
-            return Err(ShipError::NotStationOwner.into());
+        ShipStatus::AwaitingDockingAuth => {
+            // Destination docking: verify caller owns the destination station
+            {
+                let galaxy = state.galaxy.read().await;
+                let mut is_owner = false;
+                for system in galaxy.systems.values() {
+                    for planet in &system.planets {
+                        if planet.id == ship_snapshot.destination_planet_id {
+                            if let PlanetStatus::Connected { ref station, .. } = planet.status {
+                                if station.owner_id == auth.0.id {
+                                    is_owner = true;
+                                }
+                            }
+                        }
+                    }
+                }
+                if !is_owner {
+                    return Err(ShipError::NotStationOwner.into());
+                }
+            }
+
+            // Set status to Unloading
+            let total_cargo: u64 = ship_snapshot.cargo.values().sum();
+            let operation_secs = total_cargo as f64 * state.config.trucking.seconds_per_unit;
+            let now = now_ms();
+            let complete_at = now + (operation_secs * 1000.0) as u64;
+
+            let ship_result = {
+                let mut ships = state.ships.write().await;
+                let ship = ships
+                    .get_mut(&ship_id)
+                    .ok_or_else(|| ShipError::ShipNotFound(ship_id.to_string()))?;
+
+                if ship.status != ShipStatus::AwaitingDockingAuth {
+                    return Err(ShipError::InvalidShipState.into());
+                }
+
+                ship.status = ShipStatus::Unloading;
+                ship.operation_complete_at = Some(complete_at);
+                ship.clone()
+            };
+
+            // Send ShipDocked webhook
+            let callback_url = {
+                let players = state.players.read().await;
+                players
+                    .get(&ship_result.owner_id)
+                    .map(|p| p.callback_url.clone())
+                    .unwrap_or_default()
+            };
+            let payload = ShipWebhookPayload::ShipDocked {
+                ship_id,
+                status: "unloading".to_string(),
+            };
+            send_ship_webhook(
+                &state.http_client,
+                &callback_url,
+                &payload,
+                state.config.ship.webhook_timeout_secs,
+                ship_id,
+            )
+            .await;
+
+            Ok(Json(ship_result))
         }
+        _ => Err(ShipError::InvalidShipState.into()),
     }
-
-    let (ship_result, callback_url) = {
-        let mut ships = state.ships.write().await;
-        let ship = ships
-            .get_mut(&ship_id)
-            .ok_or_else(|| ShipError::ShipNotFound(ship_id.to_string()))?;
-
-        if ship.status != ShipStatus::AwaitingDockingAuth {
-            return Err(ShipError::InvalidShipState.into());
-        }
-
-        ship.status = ShipStatus::Docked;
-
-        // Calculate loading/unloading time
-        let total_cargo: u64 = ship.cargo.values().sum();
-        let operation_secs = total_cargo as f64 * state.config.ship.seconds_per_unit;
-        let now = now_ms();
-        let complete_at = now + (operation_secs * 1000.0) as u64;
-
-        // Determine if loading or unloading (ships always unload at destination)
-        ship.status = ShipStatus::Unloading;
-        ship.operation_complete_at = Some(complete_at);
-
-        let ship_clone = ship.clone();
-
-        // Get callback URL for ship owner
-        let players = state.players.read().await;
-        let callback = players
-            .get(&ship_clone.owner_id)
-            .map(|p| p.callback_url.clone())
-            .unwrap_or_default();
-
-        (ship_clone, callback)
-    };
-
-    // Send ShipDocked webhook
-    let payload = ShipWebhookPayload::ShipDocked {
-        ship_id,
-        status: "unloading".to_string(),
-    };
-    send_ship_webhook(
-        &state.http_client,
-        &callback_url,
-        &payload,
-        state.config.ship.webhook_timeout_secs,
-        ship_id,
-    )
-    .await;
-
-    Ok(Json(ship_result))
 }
 
 #[instrument(skip(state, auth))]
@@ -309,100 +289,188 @@ async fn undock_ship(
         return Err(ShipError::InvalidShipState.into());
     }
 
-    // Verify auth player owns the destination station
     let ship_snapshot = {
-        let ships = state.ships.read().await;
-        let ship = ships
-            .get(&ship_id)
-            .ok_or_else(|| ShipError::ShipNotFound(ship_id.to_string()))?;
-        ship.clone()
-    };
-
-    {
-        let galaxy = state.galaxy.read().await;
-        let mut is_owner = false;
-        for system in galaxy.systems.values() {
-            for planet in &system.planets {
-                if planet.id == ship_snapshot.destination_planet_id {
-                    if let PlanetStatus::Connected { ref station, .. } = planet.status {
-                        if station.owner_id == auth.0.id {
-                            is_owner = true;
-                        }
-                    }
-                }
-            }
-        }
-        if !is_owner {
-            return Err(ShipError::NotStationOwner.into());
-        }
-    }
-
-    // Check and transition state
-    {
         let mut ships = state.ships.write().await;
         let ship = ships
             .get_mut(&ship_id)
             .ok_or_else(|| ShipError::ShipNotFound(ship_id.to_string()))?;
 
-        // Also check if operation is complete via polling
+        // Polling: check if operation is complete
         let now = now_ms();
-        if matches!(ship.status, ShipStatus::Loading | ShipStatus::Unloading) {
-            if let Some(complete_at) = ship.operation_complete_at {
-                if now >= complete_at {
-                    ship.status = ShipStatus::AwaitingUndockingAuth;
+        if let Some(complete_at) = ship.operation_complete_at {
+            if now >= complete_at {
+                match ship.status {
+                    ShipStatus::Loading => {
+                        ship.status = ShipStatus::AwaitingOriginUndockingAuth;
+                    }
+                    ShipStatus::Unloading => {
+                        ship.status = ShipStatus::AwaitingUndockingAuth;
+                    }
+                    _ => {}
                 }
             }
         }
 
-        if ship.status != ShipStatus::AwaitingUndockingAuth {
-            return Err(ShipError::InvalidShipState.into());
+        ship.clone()
+    };
+
+    match ship_snapshot.status {
+        ShipStatus::AwaitingOriginUndockingAuth => {
+            // Origin undocking: verify caller owns the origin station
+            {
+                let galaxy = state.galaxy.read().await;
+                let mut is_owner = false;
+                for system in galaxy.systems.values() {
+                    for planet in &system.planets {
+                        if planet.id == ship_snapshot.origin_planet_id {
+                            if let PlanetStatus::Connected { ref station, .. } = planet.status {
+                                if station.owner_id == auth.0.id {
+                                    is_owner = true;
+                                }
+                            }
+                        }
+                    }
+                }
+                if !is_owner {
+                    return Err(ShipError::NotStationOwner.into());
+                }
+            }
+
+            // Calculate travel time origin → destination
+            let (transit_secs, dest_callback_url) = {
+                let galaxy = state.galaxy.read().await;
+                let origin_info = galaxy.find_planet_info(&ship_snapshot.origin_planet_id);
+                let dest_info = galaxy.find_planet_info(&ship_snapshot.destination_planet_id);
+
+                let transit = match (origin_info, dest_info) {
+                    (Some((origin_sys, origin_coords, origin_au, _)), Some((dest_sys, dest_coords, dest_au, _))) => {
+                        let same_system = origin_sys == dest_sys;
+                        calculate_travel_time(
+                            &origin_coords,
+                            origin_au,
+                            &dest_coords,
+                            dest_au,
+                            same_system,
+                            &state.config.trucking,
+                        )
+                    }
+                    _ => 0.0,
+                };
+
+                let dest_owner = galaxy
+                    .find_planet_info(&ship_snapshot.destination_planet_id)
+                    .map(|(_, _, _, owner)| owner)
+                    .unwrap_or_default();
+
+                let players = state.players.read().await;
+                let callback = players
+                    .get(&dest_owner)
+                    .map(|p| p.callback_url.clone())
+                    .unwrap_or_default();
+
+                (transit, callback)
+            };
+
+            // Set status to InTransit and spawn transit
+            {
+                let mut ships = state.ships.write().await;
+                let ship = ships
+                    .get_mut(&ship_id)
+                    .ok_or_else(|| ShipError::ShipNotFound(ship_id.to_string()))?;
+                ship.status = ShipStatus::InTransit;
+            }
+
+            spawn_ship_transit(
+                state.ships.clone(),
+                ship_id,
+                transit_secs,
+                dest_callback_url,
+                state.config.ship.clone(),
+                state.http_client.clone(),
+            );
+
+            let ship_result = {
+                let ships = state.ships.read().await;
+                ships.get(&ship_id).cloned().unwrap()
+            };
+
+            Ok(Json(ship_result))
         }
+        ShipStatus::AwaitingUndockingAuth => {
+            // Destination undocking: verify caller owns the destination station
+            {
+                let galaxy = state.galaxy.read().await;
+                let mut is_owner = false;
+                for system in galaxy.systems.values() {
+                    for planet in &system.planets {
+                        if planet.id == ship_snapshot.destination_planet_id {
+                            if let PlanetStatus::Connected { ref station, .. } = planet.status {
+                                if station.owner_id == auth.0.id {
+                                    is_owner = true;
+                                }
+                            }
+                        }
+                    }
+                }
+                if !is_owner {
+                    return Err(ShipError::NotStationOwner.into());
+                }
+            }
 
-        ship.status = ShipStatus::Complete;
-    }
+            // Set status to Complete
+            {
+                let mut ships = state.ships.write().await;
+                let ship = ships
+                    .get_mut(&ship_id)
+                    .ok_or_else(|| ShipError::ShipNotFound(ship_id.to_string()))?;
+                ship.status = ShipStatus::Complete;
+            }
 
-    // Transfer cargo to destination station
-    {
-        let mut galaxy = state.galaxy.write().await;
-        for system in galaxy.systems.values_mut() {
-            for planet in &mut system.planets {
-                if planet.id == ship_snapshot.destination_planet_id {
-                    if let PlanetStatus::Connected {
-                        ref mut station, ..
-                    } = planet.status
-                    {
-                        for (good, &qty) in &ship_snapshot.cargo {
-                            let entry = station.inventory.entry(good.clone()).or_insert(0);
-                            *entry += qty;
+            // Transfer cargo to destination station
+            {
+                let mut galaxy = state.galaxy.write().await;
+                for system in galaxy.systems.values_mut() {
+                    for planet in &mut system.planets {
+                        if planet.id == ship_snapshot.destination_planet_id {
+                            if let PlanetStatus::Connected {
+                                ref mut station, ..
+                            } = planet.status
+                            {
+                                for (good, &qty) in &ship_snapshot.cargo {
+                                    let entry = station.inventory.entry(good.clone()).or_insert(0);
+                                    *entry += qty;
+                                }
+                            }
                         }
                     }
                 }
             }
+
+            let ship_result = {
+                let ships = state.ships.read().await;
+                ships.get(&ship_id).cloned().unwrap()
+            };
+
+            // Send ShipComplete webhook
+            let players = state.players.read().await;
+            let callback = players
+                .get(&ship_snapshot.owner_id)
+                .map(|p| p.callback_url.clone())
+                .unwrap_or_default();
+            drop(players);
+
+            let payload = ShipWebhookPayload::ShipComplete { ship_id };
+            send_ship_webhook(
+                &state.http_client,
+                &callback,
+                &payload,
+                state.config.ship.webhook_timeout_secs,
+                ship_id,
+            )
+            .await;
+
+            Ok(Json(ship_result))
         }
+        _ => Err(ShipError::InvalidShipState.into()),
     }
-
-    let ship_result = {
-        let ships = state.ships.read().await;
-        ships.get(&ship_id).cloned().unwrap()
-    };
-
-    // Send ShipComplete webhook
-    let players = state.players.read().await;
-    let callback = players
-        .get(&ship_snapshot.owner_id)
-        .map(|p| p.callback_url.clone())
-        .unwrap_or_default();
-    drop(players);
-
-    let payload = ShipWebhookPayload::ShipComplete { ship_id };
-    send_ship_webhook(
-        &state.http_client,
-        &callback,
-        &payload,
-        state.config.ship.webhook_timeout_secs,
-        ship_id,
-    )
-    .await;
-
-    Ok(Json(ship_result))
 }

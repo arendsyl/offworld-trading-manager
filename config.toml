@@ -35,6 +35,15 @@ webhook_timeout_secs = 5
 # Admin bearer token (can also be set via ADMIN_TOKEN env var)
 token = "admin-secret-token"
 
+# Trucking configuration
+[trucking]
+jump_range_ly = 5.0
+jump_time_secs = 3.0
+au_to_seconds = 2.0
+seconds_per_unit = 0.1
+base_fee = 100
+fee_per_unit = 1.0
+
 # Market configuration
 [market]
 # Broadcast channel capacity for SSE trade events

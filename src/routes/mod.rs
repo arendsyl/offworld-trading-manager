@@ -7,6 +7,7 @@ mod connections;
 mod players;
 mod ships;
 mod market;
+mod trucking;
 
 pub use systems::{admin_systems_router, player_systems_router};
 pub use planets::{admin_planets_router, player_planets_router};
@@ -17,3 +18,4 @@ pub use connections::admin_connections_router;
 pub use players::{admin_players_router, player_players_router};
 pub use ships::player_ships_router;
 pub use market::player_market_router;
+pub use trucking::player_trucking_router;
