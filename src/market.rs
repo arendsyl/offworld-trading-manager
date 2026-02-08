@@ -380,23 +380,25 @@ impl MarketState {
                 order.status = OrderStatus::Cancelled;
                 let order = order.clone();
 
-                // Remove from book
-                let book = self.books.get_mut(&order.good_name)?;
-                let price = order.price?;
-                match order.side {
-                    OrderSide::Buy => {
-                        if let Some(queue) = book.bids.get_mut(&price) {
-                            queue.retain(|&id| id != order_id);
-                            if queue.is_empty() {
-                                book.bids.remove(&price);
+                // Remove from book only for limit orders (market orders are never in the book)
+                if let Some(price) = order.price {
+                    if let Some(book) = self.books.get_mut(&order.good_name) {
+                        match order.side {
+                            OrderSide::Buy => {
+                                if let Some(queue) = book.bids.get_mut(&price) {
+                                    queue.retain(|&id| id != order_id);
+                                    if queue.is_empty() {
+                                        book.bids.remove(&price);
+                                    }
+                                }
                             }
-                        }
-                    }
-                    OrderSide::Sell => {
-                        if let Some(queue) = book.asks.get_mut(&price) {
-                            queue.retain(|&id| id != order_id);
-                            if queue.is_empty() {
-                                book.asks.remove(&price);
+                            OrderSide::Sell => {
+                                if let Some(queue) = book.asks.get_mut(&price) {
+                                    queue.retain(|&id| id != order_id);
+                                    if queue.is_empty() {
+                                        book.asks.remove(&price);
+                                    }
+                                }
                             }
                         }
                     }

@@ -118,6 +118,9 @@ pub enum AppError {
 
     #[error("{0}")]
     Market(#[from] MarketError),
+
+    #[error("Station has active ships and cannot be deleted: {0}")]
+    StationHasActiveShips(String),
 }
 
 #[derive(Serialize)]
@@ -172,6 +175,7 @@ impl IntoResponse for AppError {
                 };
                 (status, self.to_string())
             }
+            AppError::StationHasActiveShips(_) => (StatusCode::CONFLICT, self.to_string()),
             AppError::Market(e) => {
                 let status = match e {
                     MarketError::InsufficientCredits { .. } => StatusCode::BAD_REQUEST,

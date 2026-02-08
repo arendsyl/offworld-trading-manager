@@ -6,10 +6,12 @@ use axum::{
 };
 use tracing::{debug, info, warn, instrument};
 
+use uuid::Uuid;
+
 use crate::error::AppError;
 use crate::models::{
-    Cabin, CreateStationRequest, MassDriver, PlanetStatus, SpaceElevator, SpaceElevatorConfig,
-    Station, Warehouse,
+    Cabin, CreateStationRequest, MassDriver, Order, OrderSide, OrderStatus, PlanetStatus,
+    ShipStatus, SpaceElevator, SpaceElevatorConfig, Station, Warehouse,
 };
 use crate::state::AppState;
 
@@ -119,6 +121,7 @@ async fn create_or_update_station(
         PlanetStatus::Connected { settlement, space_elevator, station: existing_station } => {
             let mut updated_station = station.clone();
             updated_station.mass_driver = existing_station.mass_driver.clone();
+            updated_station.inventory = existing_station.inventory.clone();
             (false, PlanetStatus::Connected {
                 settlement: settlement.clone(),
                 station: updated_station,
@@ -151,13 +154,105 @@ async fn delete_station(
     Path((system_name, planet_id)): Path<(String, String)>,
 ) -> Result<StatusCode, AppError> {
     debug!("Deleting station");
-    let mut state = state.galaxy.write().await;
 
-    let system = state
+    // Verify the station exists first
+    {
+        let galaxy = state.galaxy.read().await;
+        let system = galaxy
+            .systems
+            .get(&system_name)
+            .ok_or_else(|| AppError::SystemNotFound(system_name.clone()))?;
+        let planet = system
+            .planets
+            .iter()
+            .find(|p| p.id == planet_id)
+            .ok_or_else(|| AppError::PlanetNotFound(planet_id.clone()))?;
+        match &planet.status {
+            PlanetStatus::Connected { .. } => {}
+            PlanetStatus::Settled { .. } => {
+                return Err(AppError::StationNotFound(planet_id));
+            }
+            PlanetStatus::Uninhabited => {
+                return Err(AppError::SettlementNotFound(planet_id));
+            }
+        }
+    }
+
+    // Check for active ships referencing this planet
+    {
+        let ships = state.ships.read().await;
+        for ship in ships.values() {
+            if ship.status != ShipStatus::Complete
+                && (ship.origin_planet_id == planet_id || ship.destination_planet_id == planet_id)
+            {
+                return Err(AppError::StationHasActiveShips(planet_id));
+            }
+        }
+    }
+
+    // Cancel open orders and collect them for refunding
+    let cancelled_orders: Vec<Order> = {
+        let mut market = state.market.write().await;
+        let order_ids: Vec<Uuid> = market
+            .orders
+            .values()
+            .filter(|o| {
+                o.station_planet_id == planet_id
+                    && matches!(o.status, OrderStatus::Open | OrderStatus::PartiallyFilled)
+            })
+            .map(|o| o.id)
+            .collect();
+
+        let mut cancelled = Vec::new();
+        for order_id in order_ids {
+            if let Some(order) = market.cancel_order(order_id) {
+                cancelled.push(order);
+            }
+        }
+        cancelled
+    };
+
+    // Refund cancelled orders (one lock at a time)
+    for order in &cancelled_orders {
+        let remaining = order.quantity - order.filled_quantity;
+        match order.side {
+            OrderSide::Buy => {
+                if let Some(price) = order.price {
+                    let refund = price as i64 * remaining as i64;
+                    let mut players = state.players.write().await;
+                    if let Some(player) = players.get_mut(&order.player_id) {
+                        player.credits += refund;
+                    }
+                }
+            }
+            OrderSide::Sell => {
+                let mut galaxy = state.galaxy.write().await;
+                for system in galaxy.systems.values_mut() {
+                    for planet in &mut system.planets {
+                        if planet.id == order.station_planet_id {
+                            if let PlanetStatus::Connected {
+                                ref mut station, ..
+                            } = planet.status
+                            {
+                                let entry = station
+                                    .inventory
+                                    .entry(order.good_name.clone())
+                                    .or_insert(0);
+                                *entry += remaining;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Delete the station
+    let mut galaxy = state.galaxy.write().await;
+    let system = galaxy
         .systems
         .get_mut(&system_name)
         .ok_or_else(|| AppError::SystemNotFound(system_name.clone()))?;
-
     let planet = system
         .planets
         .iter_mut()
@@ -166,17 +261,12 @@ async fn delete_station(
 
     match &planet.status {
         PlanetStatus::Connected { settlement, .. } => {
-            planet.status = PlanetStatus::Settled { settlement: settlement.clone() };
+            planet.status = PlanetStatus::Settled {
+                settlement: settlement.clone(),
+            };
             info!(planet_id = %planet_id, "Station deleted successfully");
             Ok(StatusCode::NO_CONTENT)
         }
-        PlanetStatus::Settled { .. } => {
-            warn!(planet_id = %planet_id, "Station not found for deletion");
-            Err(AppError::StationNotFound(planet_id))
-        }
-        PlanetStatus::Uninhabited => {
-            warn!(planet_id = %planet_id, "Station not found - planet uninhabited");
-            Err(AppError::SettlementNotFound(planet_id))
-        }
+        _ => Err(AppError::StationNotFound(planet_id)),
     }
 }

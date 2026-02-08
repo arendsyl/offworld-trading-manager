@@ -163,6 +163,27 @@ async fn place_order(
         market.place_order(order)
     };
 
+    // Return unfilled goods for market sell orders
+    if body.side == OrderSide::Sell && body.order_type == OrderType::Market {
+        let unfilled = {
+            let market = state.market.read().await;
+            market.orders.get(&order_id).map(|o| o.remaining()).unwrap_or(0)
+        };
+        if unfilled > 0 {
+            let mut galaxy = state.galaxy.write().await;
+            for system in galaxy.systems.values_mut() {
+                for planet in &mut system.planets {
+                    if planet.id == body.station_planet_id {
+                        if let PlanetStatus::Connected { ref mut station, .. } = planet.status {
+                            let entry = station.inventory.entry(body.good_name.clone()).or_insert(0);
+                            *entry += unfilled;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // Process trades: transfer credits and spawn ships
     for trade in &trades {
         // Transfer credits between players
@@ -173,10 +194,6 @@ async fn place_order(
             // For market buy orders, deduct from buyer now
             if body.side == OrderSide::Buy && body.order_type == OrderType::Market {
                 if let Some(buyer) = players.get_mut(&trade.buyer_id) {
-                    if buyer.credits < total_cost {
-                        // This shouldn't happen in normal flow, but handle gracefully
-                        continue;
-                    }
                     buyer.credits -= total_cost;
                 }
             }
@@ -258,6 +275,27 @@ async fn place_order(
                 state.config.ship.clone(),
                 state.http_client.clone(),
             );
+        } else {
+            // Same station: deliver immediately
+            {
+                let mut ships = state.ships.write().await;
+                if let Some(ship) = ships.get_mut(&ship_id) {
+                    ship.status = ShipStatus::Complete;
+                }
+            }
+            {
+                let mut galaxy = state.galaxy.write().await;
+                for system in galaxy.systems.values_mut() {
+                    for planet in &mut system.planets {
+                        if planet.id == trade.buyer_station {
+                            if let PlanetStatus::Connected { ref mut station, .. } = planet.status {
+                                let entry = station.inventory.entry(trade.good_name.clone()).or_insert(0);
+                                *entry += trade.quantity;
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
