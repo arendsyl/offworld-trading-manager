@@ -114,7 +114,8 @@ pub fn load_seed_data<P: AsRef<Path>>(path: P) -> Result<SeedData, Box<dyn std::
 pub fn load_players_from_seed<P: AsRef<Path>>(path: P) -> Result<HashMap<String, Player>, Box<dyn std::error::Error>> {
     let seed = load_seed_data(path)?;
     let mut players = HashMap::new();
-    for player in seed.players {
+    for mut player in seed.players {
+        player.initial_credits = player.credits;
         players.insert(player.id.clone(), player);
     }
     Ok(players)

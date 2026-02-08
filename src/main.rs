@@ -15,7 +15,7 @@ use offworld_trading_manager::auth::{admin_auth_middleware, player_auth_middlewa
 use offworld_trading_manager::routes::{
     admin_connections_router, admin_planets_router, admin_players_router,
     admin_settlements_router, admin_stations_router, admin_systems_router,
-    player_construction_router, player_market_router, player_planets_router,
+    player_construction_router, player_leaderboard_router, player_market_router, player_planets_router,
     player_players_router, player_settlements_router, player_ships_router,
     player_stations_router, player_systems_router, player_trucking_router,
     space_elevator_router,
@@ -159,6 +159,7 @@ async fn main() {
         .nest("/trucking", player_trucking_router())
         .nest("/market", player_market_router())
         .nest("/construction", player_construction_router())
+        .nest("/leaderboard", player_leaderboard_router())
         .layer(axum::middleware::from_fn_with_state(app_state.clone(), player_auth_middleware));
 
     let app = Router::new()

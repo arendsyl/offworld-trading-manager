@@ -5,8 +5,17 @@ pub struct Player {
     pub id: String,
     pub name: String,
     pub credits: i64,
+    #[serde(default)]
+    pub initial_credits: i64,
     pub api_key: String,
     pub callback_url: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct LeaderboardEntry {
+    pub player_id: String,
+    pub player_name: String,
+    pub profit: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
