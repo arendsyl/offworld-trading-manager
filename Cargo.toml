@@ -20,6 +20,7 @@ futures = "0.3"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 chrono = { version = "0.4", features = ["serde"] }
 tokio-stream = { version = "0.1", features = ["sync"] }
+biscuit-auth = "5"
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }

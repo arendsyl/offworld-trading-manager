@@ -86,7 +86,7 @@ async fn main() {
     };
 
     // Load players from seed data
-    let players = match &config.seed {
+    let mut players = match &config.seed {
         Some(seed_path) => {
             state::load_players_from_seed(seed_path).unwrap_or_else(|e| {
                 warn!(error = %e, "Failed to load players from seed data");
@@ -95,6 +95,47 @@ async fn main() {
         }
         None => HashMap::new(),
     };
+
+    // Parse Biscuit root key from config
+    let biscuit_root = {
+        use biscuit_auth::{PrivateKey, KeyPair};
+        let private_key = PrivateKey::from_bytes_hex(
+            &config.admin.biscuit_private_key_hex,
+        )
+        .unwrap_or_else(|e| {
+            error!(error = %e, "Invalid biscuit private key hex");
+            std::process::exit(1);
+        });
+        Arc::new(KeyPair::from(&private_key))
+    };
+
+    // Generate Biscuit tokens for seed players that don't have one
+    {
+        use biscuit_auth::macros::biscuit;
+        for player in players.values_mut() {
+            if player.pulsar_biscuit.is_empty() {
+                let topic_receive = format!(
+                    "persistent://{}/{}/mass-driver.receive.{}",
+                    config.pulsar.tenant, config.pulsar.namespace, player.id
+                );
+                let topic_send = format!(
+                    "persistent://{}/{}/mass-driver.send.{}",
+                    config.pulsar.tenant, config.pulsar.namespace, player.id
+                );
+                let player_id = player.id.as_str();
+                let token = biscuit!(
+                    r#"
+                    player({player_id});
+                    topic({topic_receive});
+                    topic({topic_send});
+                    "#
+                )
+                .build(&biscuit_root)
+                .expect("failed to build biscuit token");
+                player.pulsar_biscuit = token.to_base64().expect("failed to serialize biscuit");
+            }
+        }
+    }
 
     let trade_channel_capacity = config.market.trade_channel_capacity;
     let config = Arc::new(config);
@@ -120,6 +161,7 @@ async fn main() {
         pulsar: pulsar.clone(),
         config: config.clone(),
         http_client: reqwest::Client::new(),
+        biscuit_root,
     };
 
     // Spawn consumers for each player if Pulsar is available

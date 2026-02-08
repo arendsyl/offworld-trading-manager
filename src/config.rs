@@ -162,16 +162,24 @@ fn default_admin_token() -> String {
     "admin-secret-token".to_string()
 }
 
+fn default_biscuit_private_key_hex() -> String {
+    // Dev-only default key — override via config or BISCUIT_PRIVATE_KEY env var in production
+    "a0907d384d28b8fa73840c618b37e04af3ef22d1f181b59a8b15d36df6c6460a".to_string()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdminConfig {
     #[serde(default = "default_admin_token")]
     pub token: String,
+    #[serde(default = "default_biscuit_private_key_hex")]
+    pub biscuit_private_key_hex: String,
 }
 
 impl Default for AdminConfig {
     fn default() -> Self {
         Self {
             token: default_admin_token(),
+            biscuit_private_key_hex: default_biscuit_private_key_hex(),
         }
     }
 }
@@ -342,6 +350,9 @@ pub fn load_config(
     }
     if let Ok(token) = std::env::var("ADMIN_TOKEN") {
         config.admin.token = token;
+    }
+    if let Ok(key) = std::env::var("BISCUIT_PRIVATE_KEY") {
+        config.admin.biscuit_private_key_hex = key;
     }
 
     // CLI overrides

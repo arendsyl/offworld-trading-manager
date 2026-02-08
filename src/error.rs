@@ -157,6 +157,9 @@ pub enum AppError {
     #[error("Player not found: {0}")]
     PlayerNotFound(String),
 
+    #[error("Player already exists: {0}")]
+    PlayerAlreadyExists(String),
+
     #[error("Unauthorized: missing or invalid Bearer token")]
     Unauthorized,
 
@@ -219,6 +222,7 @@ impl IntoResponse for AppError {
                 (status, self.to_string())
             }
             AppError::PlayerNotFound(_) => (StatusCode::NOT_FOUND, self.to_string()),
+            AppError::PlayerAlreadyExists(_) => (StatusCode::CONFLICT, self.to_string()),
             AppError::Unauthorized => (StatusCode::UNAUTHORIZED, self.to_string()),
             AppError::Forbidden => (StatusCode::FORBIDDEN, self.to_string()),
             AppError::Ship(e) => {
