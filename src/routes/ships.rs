@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use axum::{
     extract::{Path, Query, State},
     routing::{get, put},
@@ -17,6 +19,24 @@ use crate::ship_lifecycle::{
     calculate_travel_time, send_ship_webhook, spawn_ship_transit,
 };
 use crate::state::AppState;
+
+fn count_docked_ships(ships: &HashMap<Uuid, Ship>, planet_id: &str) -> u32 {
+    ships
+        .values()
+        .filter(|s| {
+            (s.origin_planet_id == planet_id
+                && matches!(
+                    s.status,
+                    ShipStatus::Loading | ShipStatus::AwaitingOriginUndockingAuth
+                ))
+                || (s.destination_planet_id == planet_id
+                    && matches!(
+                        s.status,
+                        ShipStatus::Unloading | ShipStatus::AwaitingUndockingAuth
+                    ))
+        })
+        .count() as u32
+}
 
 pub fn player_ships_router() -> Router<AppState> {
     Router::new()
@@ -197,13 +217,8 @@ async fn dock_ship(
                     for planet in &system.planets {
                         if planet.id == ship_snapshot.origin_planet_id {
                             if let PlanetStatus::Connected { ref station, .. } = planet.status {
-                                let active_at_station = ships
-                                    .values()
-                                    .filter(|s| {
-                                        matches!(s.status, ShipStatus::Loading | ShipStatus::Unloading)
-                                            && s.origin_planet_id == ship_snapshot.origin_planet_id
-                                    })
-                                    .count() as u32;
+                                let active_at_station =
+                                    count_docked_ships(&ships, &ship_snapshot.origin_planet_id);
                                 if active_at_station >= station.docking_bays {
                                     return Err(ConstructionError::NoDockingBayAvailable(
                                         ship_snapshot.origin_planet_id.clone(),
@@ -284,13 +299,8 @@ async fn dock_ship(
                     for planet in &system.planets {
                         if planet.id == ship_snapshot.destination_planet_id {
                             if let PlanetStatus::Connected { ref station, .. } = planet.status {
-                                let active_at_station = ships
-                                    .values()
-                                    .filter(|s| {
-                                        matches!(s.status, ShipStatus::Loading | ShipStatus::Unloading)
-                                            && s.destination_planet_id == ship_snapshot.destination_planet_id
-                                    })
-                                    .count() as u32;
+                                let active_at_station =
+                                    count_docked_ships(&ships, &ship_snapshot.destination_planet_id);
                                 if active_at_station >= station.docking_bays {
                                     return Err(ConstructionError::NoDockingBayAvailable(
                                         ship_snapshot.destination_planet_id.clone(),
