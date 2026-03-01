@@ -6,6 +6,7 @@ use axum::{
 };
 use serde::Deserialize;
 use tracing::{debug, info, instrument};
+use utoipa::IntoParams;
 use uuid::Uuid;
 
 use crate::error::{AppError, MassDriverError};
@@ -14,6 +15,7 @@ use crate::models::{
     NotifyMessage, PlanetStatus, UpdateConnectionRequest,
 };
 use crate::state::AppState;
+use crate::validation::validate_input;
 
 pub fn admin_connections_router() -> Router<AppState> {
     Router::new()
@@ -26,7 +28,7 @@ pub fn admin_connections_router() -> Router<AppState> {
         )
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, IntoParams)]
 pub struct ConnectionFilter {
     pub system: Option<String>,
     pub planet: Option<String>,
@@ -41,8 +43,18 @@ fn get_planet_connections<'a>(
         .collect()
 }
 
+#[utoipa::path(
+    get,
+    path = "/admin/connections",
+    tag = "connections",
+    params(ConnectionFilter),
+    responses(
+        (status = 200, description = "List of mass driver connections", body = Vec<MassDriverConnection>),
+    ),
+    security(("bearer_auth" = [])),
+)]
 #[instrument(skip(state))]
-async fn list_connections(
+pub async fn list_connections(
     State(state): State<AppState>,
     Query(filter): Query<ConnectionFilter>,
 ) -> Json<Vec<MassDriverConnection>> {
@@ -70,8 +82,21 @@ async fn list_connections(
     Json(connections)
 }
 
+#[utoipa::path(
+    get,
+    path = "/admin/connections/{id}",
+    tag = "connections",
+    params(
+        ("id" = Uuid, Path, description = "Connection ID"),
+    ),
+    responses(
+        (status = 200, description = "Connection details", body = MassDriverConnection),
+        (status = 404, description = "Connection not found"),
+    ),
+    security(("bearer_auth" = [])),
+)]
 #[instrument(skip(state))]
-async fn get_connection(
+pub async fn get_connection(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<MassDriverConnection>, AppError> {
@@ -86,11 +111,24 @@ async fn get_connection(
     Ok(Json(connection.clone()))
 }
 
+#[utoipa::path(
+    post,
+    path = "/admin/connections",
+    tag = "connections",
+    request_body = CreateConnectionRequest,
+    responses(
+        (status = 201, description = "Connection created", body = MassDriverConnection),
+        (status = 400, description = "Invalid request"),
+        (status = 404, description = "System or planet not found"),
+    ),
+    security(("bearer_auth" = [])),
+)]
 #[instrument(skip(state, payload))]
-async fn create_connection(
+pub async fn create_connection(
     State(state): State<AppState>,
     Json(payload): Json<CreateConnectionRequest>,
 ) -> Result<(StatusCode, Json<MassDriverConnection>), AppError> {
+    validate_input(&payload)?;
     debug!(
         system = %payload.system,
         from = %payload.from_planet,
@@ -181,8 +219,23 @@ async fn create_connection(
     Ok((StatusCode::CREATED, Json(connection)))
 }
 
+#[utoipa::path(
+    put,
+    path = "/admin/connections/{id}",
+    tag = "connections",
+    params(
+        ("id" = Uuid, Path, description = "Connection ID"),
+    ),
+    request_body = UpdateConnectionRequest,
+    responses(
+        (status = 200, description = "Connection updated", body = MassDriverConnection),
+        (status = 400, description = "Invalid connection state"),
+        (status = 404, description = "Connection not found"),
+    ),
+    security(("bearer_auth" = [])),
+)]
 #[instrument(skip(state, payload))]
-async fn update_connection(
+pub async fn update_connection(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
     Json(payload): Json<UpdateConnectionRequest>,
@@ -265,7 +318,8 @@ async fn update_connection(
                 );
             }
 
-            let conn = galaxy.connections.get_mut(&id).unwrap();
+            let conn = galaxy.connections.get_mut(&id)
+                .ok_or_else(|| AppError::Internal(format!("connection {id} disappeared")))?;
             conn.status = ConnectionStatus::Active;
             let updated = conn.clone();
 
@@ -291,7 +345,8 @@ async fn update_connection(
                 return Err(MassDriverError::InvalidConnectionState.into());
             }
 
-            let conn = galaxy.connections.get_mut(&id).unwrap();
+            let conn = galaxy.connections.get_mut(&id)
+                .ok_or_else(|| AppError::Internal(format!("connection {id} disappeared")))?;
             conn.status = ConnectionStatus::Closed;
             let updated = conn.clone();
 
@@ -317,7 +372,8 @@ async fn update_connection(
                 return Err(MassDriverError::InvalidConnectionState.into());
             }
 
-            let conn = galaxy.connections.get_mut(&id).unwrap();
+            let conn = galaxy.connections.get_mut(&id)
+                .ok_or_else(|| AppError::Internal(format!("connection {id} disappeared")))?;
             conn.status = ConnectionStatus::Closed;
             let updated = conn.clone();
 
@@ -354,8 +410,21 @@ async fn update_connection(
     }
 }
 
+#[utoipa::path(
+    delete,
+    path = "/admin/connections/{id}",
+    tag = "connections",
+    params(
+        ("id" = Uuid, Path, description = "Connection ID"),
+    ),
+    responses(
+        (status = 204, description = "Connection deleted"),
+        (status = 404, description = "Connection not found"),
+    ),
+    security(("bearer_auth" = [])),
+)]
 #[instrument(skip(state))]
-async fn delete_connection(
+pub async fn delete_connection(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {

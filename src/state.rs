@@ -22,6 +22,7 @@ pub struct AppState {
     pub config: Arc<AppConfig>,
     pub http_client: reqwest::Client,
     pub biscuit_root: Arc<biscuit_auth::KeyPair>,
+    pub db: Option<sqlx::PgPool>,
 }
 
 #[derive(Debug, Default, serde::Serialize, serde::Deserialize)]
@@ -144,6 +145,7 @@ pub fn create_app_state() -> AppState {
         config: Arc::new(AppConfig::default()),
         http_client: reqwest::Client::new(),
         biscuit_root: Arc::new(biscuit_auth::KeyPair::new()),
+        db: None,
     }
 }
 
@@ -162,5 +164,6 @@ pub fn create_app_state_from_file<P: AsRef<Path>>(path: P) -> Result<AppState, B
         config: Arc::new(AppConfig::default()),
         http_client: reqwest::Client::new(),
         biscuit_root: Arc::new(biscuit_auth::KeyPair::new()),
+        db: None,
     })
 }

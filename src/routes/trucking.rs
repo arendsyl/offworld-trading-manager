@@ -12,6 +12,7 @@ use crate::error::{AppError, TruckingError};
 use crate::models::{CreateTruckingRequest, Ship, ShipStatus};
 use crate::ship_lifecycle::{calculate_sol_to_planet_time, spawn_transit_to_origin};
 use crate::state::AppState;
+use crate::validation::validate_input;
 
 pub fn player_trucking_router() -> Router<AppState> {
     Router::new().route("/", post(create_trucking))
@@ -20,16 +21,27 @@ pub fn player_trucking_router() -> Router<AppState> {
 fn now_ms() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
+        .expect("system clock before UNIX epoch")
         .as_millis() as u64
 }
 
+#[utoipa::path(
+    post,
+    path = "/trucking",
+    tag = "trucking",
+    security(("api_key" = [])),
+    request_body = CreateTruckingRequest,
+    responses(
+        (status = 201, description = "Trucking request created", body = Ship),
+    ),
+)]
 #[instrument(skip(state, auth))]
-async fn create_trucking(
+pub async fn create_trucking(
     State(state): State<AppState>,
     auth: AuthenticatedPlayer,
     Json(body): Json<CreateTruckingRequest>,
 ) -> Result<(StatusCode, Json<Ship>), AppError> {
+    validate_input(&body)?;
     if body.origin_planet_id == body.destination_planet_id {
         return Err(TruckingError::SameStation.into());
     }

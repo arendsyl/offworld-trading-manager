@@ -298,6 +298,12 @@ impl Default for ConstructionConfig {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct DatabaseConfig {
+    pub url: Option<String>,
+    pub auto_save_interval_secs: Option<u64>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
     #[serde(default = "default_port")]
@@ -321,6 +327,8 @@ pub struct AppConfig {
     pub construction: ConstructionConfig,
     #[serde(default)]
     pub trade: TradeConfig,
+    #[serde(default)]
+    pub database: DatabaseConfig,
 }
 
 fn default_port() -> u16 {
@@ -341,6 +349,7 @@ impl Default for AppConfig {
             admin: AdminConfig::default(),
             construction: ConstructionConfig::default(),
             trade: TradeConfig::default(),
+            database: DatabaseConfig::default(),
         }
     }
 }
@@ -374,6 +383,9 @@ pub fn load_config(
     }
     if let Ok(key) = std::env::var("BISCUIT_PRIVATE_KEY") {
         config.admin.biscuit_private_key_hex = key;
+    }
+    if let Ok(url) = std::env::var("DATABASE_URL") {
+        config.database.url = Some(url);
     }
 
     // CLI overrides

@@ -41,7 +41,7 @@ impl MarketState {
                 match order.order_type {
                     OrderType::Limit => {
                         let book = self.books.entry(good_name).or_insert_with(OrderBook::new);
-                        let price = order.price.unwrap();
+                        let price = order.price.expect("invariant: limit order always has price");
                         match order.side {
                             OrderSide::Buy => {
                                 book.bids.entry(price).or_default().push_back(order_id);
@@ -112,7 +112,7 @@ impl MarketState {
             // Check price compatibility
             match buy_order.order_type {
                 OrderType::Limit => {
-                    if best_ask_price > buy_order.price.unwrap() {
+                    if best_ask_price > buy_order.price.expect("invariant: limit order always has price") {
                         break;
                     }
                 }
@@ -120,7 +120,7 @@ impl MarketState {
             }
 
             // Get the first order at this price level
-            let ask_queue = book.asks.get_mut(&best_ask_price).unwrap();
+            let ask_queue = book.asks.get_mut(&best_ask_price).expect("invariant: best ask price was just found");
             let ask_id = match ask_queue.front().copied() {
                 Some(id) => id,
                 None => {
@@ -145,7 +145,7 @@ impl MarketState {
 
             let now = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
+                .expect("system clock before UNIX epoch")
                 .as_millis() as u64;
 
             let trade = TradeEvent {
@@ -179,7 +179,7 @@ impl MarketState {
             }
 
             // Remove filled ask from book
-            let book = self.books.get_mut(&good_name).unwrap();
+            let book = self.books.get_mut(&good_name).expect("invariant: book was just accessed");
             if let Some(ask_order) = self.orders.get(&ask_id) {
                 if ask_order.remaining() == 0 {
                     if let Some(queue) = book.asks.get_mut(&best_ask_price) {
@@ -226,7 +226,7 @@ impl MarketState {
             // Check price compatibility
             match sell_order.order_type {
                 OrderType::Limit => {
-                    if best_bid_price < sell_order.price.unwrap() {
+                    if best_bid_price < sell_order.price.expect("invariant: limit order always has price") {
                         break;
                     }
                 }
@@ -234,7 +234,7 @@ impl MarketState {
             }
 
             // Get the first order at this price level
-            let bid_queue = book.bids.get_mut(&best_bid_price).unwrap();
+            let bid_queue = book.bids.get_mut(&best_bid_price).expect("invariant: best bid price was just found");
             let bid_id = match bid_queue.front().copied() {
                 Some(id) => id,
                 None => {
@@ -259,7 +259,7 @@ impl MarketState {
 
             let now = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
+                .expect("system clock before UNIX epoch")
                 .as_millis() as u64;
 
             let trade = TradeEvent {
@@ -293,7 +293,7 @@ impl MarketState {
             }
 
             // Remove filled bid from book
-            let book = self.books.get_mut(&good_name).unwrap();
+            let book = self.books.get_mut(&good_name).expect("invariant: book was just accessed");
             if let Some(bid_order) = self.orders.get(&bid_id) {
                 if bid_order.remaining() == 0 {
                     if let Some(queue) = book.bids.get_mut(&best_bid_price) {

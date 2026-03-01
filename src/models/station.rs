@@ -1,4 +1,6 @@
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
+use validator::Validate;
 
 use super::{Inventory, MassDriver};
 
@@ -10,7 +12,7 @@ fn default_max_storage() -> u64 {
     u64::MAX
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Station {
     pub name: String,
     pub owner_id: String,
@@ -24,14 +26,18 @@ pub struct Station {
     pub max_storage: u64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Validate)]
 pub struct CreateStationRequest {
+    #[validate(length(min = 1, max = 128))]
     pub name: String,
+    #[validate(length(min = 1, max = 64))]
     pub owner_id: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Validate)]
 pub struct UpdateStationRequest {
+    #[validate(length(min = 1, max = 128))]
     pub name: Option<String>,
+    #[validate(length(min = 1, max = 64))]
     pub owner_id: Option<String>,
 }

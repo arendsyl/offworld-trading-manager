@@ -9,6 +9,7 @@ use tracing::{debug, info, warn, instrument};
 use crate::error::AppError;
 use crate::models::{CreateSettlementRequest, Economy, Planet, PlanetStatus, Settlement};
 use crate::state::AppState;
+use crate::validation::validate_input;
 
 pub fn admin_settlements_router() -> Router<AppState> {
     Router::new()
@@ -27,8 +28,21 @@ pub fn player_settlements_router() -> Router<AppState> {
         .route("/{system_name}/{planet_id}", get(get_settlement))
 }
 
+#[utoipa::path(
+    get,
+    path = "/settlements/{system_name}",
+    tag = "settlements",
+    params(
+        ("system_name" = String, Path, description = "Name of the star system"),
+    ),
+    responses(
+        (status = 200, description = "List of planets with settlements", body = Vec<Planet>),
+        (status = 404, description = "System not found"),
+    ),
+    security(("api_key" = [])),
+)]
 #[instrument(skip(state))]
-async fn list_settlements_in_system(
+pub async fn list_settlements_in_system(
     State(state): State<AppState>,
     Path(system_name): Path<String>,
 ) -> Result<Json<Vec<Planet>>, AppError> {
@@ -50,8 +64,22 @@ async fn list_settlements_in_system(
     Ok(Json(planets_with_settlements))
 }
 
+#[utoipa::path(
+    get,
+    path = "/settlements/{system_name}/{planet_id}",
+    tag = "settlements",
+    params(
+        ("system_name" = String, Path, description = "Name of the star system"),
+        ("planet_id" = String, Path, description = "ID of the planet"),
+    ),
+    responses(
+        (status = 200, description = "Settlement details", body = Settlement),
+        (status = 404, description = "System, planet, or settlement not found"),
+    ),
+    security(("api_key" = [])),
+)]
 #[instrument(skip(state))]
-async fn get_settlement(
+pub async fn get_settlement(
     State(state): State<AppState>,
     Path((system_name, planet_id)): Path<(String, String)>,
 ) -> Result<Json<Settlement>, AppError> {
@@ -84,12 +112,29 @@ async fn get_settlement(
     }
 }
 
+#[utoipa::path(
+    put,
+    path = "/admin/settlements/{system_name}/{planet_id}",
+    tag = "settlements",
+    params(
+        ("system_name" = String, Path, description = "Name of the star system"),
+        ("planet_id" = String, Path, description = "ID of the planet"),
+    ),
+    request_body = CreateSettlementRequest,
+    responses(
+        (status = 201, description = "Settlement created", body = Settlement),
+        (status = 200, description = "Settlement updated", body = Settlement),
+        (status = 404, description = "System or planet not found"),
+    ),
+    security(("bearer_auth" = [])),
+)]
 #[instrument(skip(state, payload))]
-async fn create_or_update_settlement(
+pub async fn create_or_update_settlement(
     State(state): State<AppState>,
     Path((system_name, planet_id)): Path<(String, String)>,
     Json(payload): Json<CreateSettlementRequest>,
 ) -> Result<(StatusCode, Json<Settlement>), AppError> {
+    validate_input(&payload)?;
     debug!(settlement_name = %payload.name, "Creating or updating settlement");
     let mut state = state.galaxy.write().await;
 
@@ -134,8 +179,22 @@ async fn create_or_update_settlement(
     Ok((status, Json(settlement)))
 }
 
+#[utoipa::path(
+    delete,
+    path = "/admin/settlements/{system_name}/{planet_id}",
+    tag = "settlements",
+    params(
+        ("system_name" = String, Path, description = "Name of the star system"),
+        ("planet_id" = String, Path, description = "ID of the planet"),
+    ),
+    responses(
+        (status = 204, description = "Settlement deleted"),
+        (status = 404, description = "System, planet, or settlement not found"),
+    ),
+    security(("bearer_auth" = [])),
+)]
 #[instrument(skip(state))]
-async fn delete_settlement(
+pub async fn delete_settlement(
     State(state): State<AppState>,
     Path((system_name, planet_id)): Path<(String, String)>,
 ) -> Result<StatusCode, AppError> {

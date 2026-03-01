@@ -7,7 +7,16 @@ pub fn player_leaderboard_router() -> Router<AppState> {
     Router::new().route("/", get(get_leaderboard))
 }
 
-async fn get_leaderboard(State(state): State<AppState>) -> Json<Vec<LeaderboardEntry>> {
+#[utoipa::path(
+    get,
+    path = "/leaderboard",
+    tag = "leaderboard",
+    security(("api_key" = [])),
+    responses(
+        (status = 200, description = "Player leaderboard ranked by profit", body = Vec<LeaderboardEntry>),
+    ),
+)]
+pub async fn get_leaderboard(State(state): State<AppState>) -> Json<Vec<LeaderboardEntry>> {
     let players = state.players.read().await;
     let mut entries: Vec<LeaderboardEntry> = players
         .values()

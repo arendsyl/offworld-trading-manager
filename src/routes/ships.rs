@@ -46,20 +46,30 @@ pub fn player_ships_router() -> Router<AppState> {
         .route("/{ship_id}/undock", put(undock_ship))
 }
 
-#[derive(Debug, Deserialize)]
-struct ShipQuery {
-    status: Option<String>,
+#[derive(Debug, Deserialize, utoipa::IntoParams)]
+pub struct ShipQuery {
+    pub status: Option<String>,
 }
 
 fn now_ms() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
+        .expect("system clock before UNIX epoch")
         .as_millis() as u64
 }
 
+#[utoipa::path(
+    get,
+    path = "/ships",
+    tag = "ships",
+    params(ShipQuery),
+    responses(
+        (status = 200, description = "List of ships owned by the player", body = Vec<Ship>),
+    ),
+    security(("api_key" = [])),
+)]
 #[instrument(skip(state, auth))]
-async fn list_ships(
+pub async fn list_ships(
     State(state): State<AppState>,
     auth: AuthenticatedPlayer,
     Query(query): Query<ShipQuery>,
@@ -85,8 +95,22 @@ async fn list_ships(
     Json(result)
 }
 
+#[utoipa::path(
+    get,
+    path = "/ships/{ship_id}",
+    tag = "ships",
+    params(
+        ("ship_id" = Uuid, Path, description = "Ship ID"),
+    ),
+    responses(
+        (status = 200, description = "Ship details", body = Ship),
+        (status = 403, description = "Forbidden"),
+        (status = 404, description = "Ship not found"),
+    ),
+    security(("api_key" = [])),
+)]
 #[instrument(skip(state, auth))]
-async fn get_ship(
+pub async fn get_ship(
     State(state): State<AppState>,
     auth: AuthenticatedPlayer,
     Path(ship_id): Path<Uuid>,
@@ -134,8 +158,24 @@ async fn get_ship(
     Ok(Json(ship.clone()))
 }
 
+#[utoipa::path(
+    put,
+    path = "/ships/{ship_id}/dock",
+    tag = "ships",
+    params(
+        ("ship_id" = Uuid, Path, description = "Ship ID"),
+    ),
+    request_body = DockRequest,
+    responses(
+        (status = 200, description = "Ship docked", body = Ship),
+        (status = 400, description = "Invalid ship state"),
+        (status = 403, description = "Not station owner"),
+        (status = 404, description = "Ship not found"),
+    ),
+    security(("api_key" = [])),
+)]
 #[instrument(skip(state, auth))]
-async fn dock_ship(
+pub async fn dock_ship(
     State(state): State<AppState>,
     auth: AuthenticatedPlayer,
     Path(ship_id): Path<Uuid>,
@@ -361,8 +401,24 @@ async fn dock_ship(
     }
 }
 
+#[utoipa::path(
+    put,
+    path = "/ships/{ship_id}/undock",
+    tag = "ships",
+    params(
+        ("ship_id" = Uuid, Path, description = "Ship ID"),
+    ),
+    request_body = UndockRequest,
+    responses(
+        (status = 200, description = "Ship undocked", body = Ship),
+        (status = 400, description = "Invalid ship state"),
+        (status = 403, description = "Not station owner"),
+        (status = 404, description = "Ship not found"),
+    ),
+    security(("api_key" = [])),
+)]
 #[instrument(skip(state, auth))]
-async fn undock_ship(
+pub async fn undock_ship(
     State(state): State<AppState>,
     auth: AuthenticatedPlayer,
     Path(ship_id): Path<Uuid>,
@@ -419,7 +475,7 @@ async fn undock_ship(
                 }
             }
 
-            // Calculate travel time origin → destination
+            // Calculate travel time origin -> destination
             let (transit_secs, dest_callback_url) = {
                 let galaxy = state.galaxy.read().await;
                 let origin_info = galaxy.find_planet_info(&ship_snapshot.origin_planet_id);
@@ -474,7 +530,8 @@ async fn undock_ship(
 
             let ship_result = {
                 let ships = state.ships.read().await;
-                ships.get(&ship_id).cloned().unwrap()
+                ships.get(&ship_id).cloned()
+                    .ok_or_else(|| AppError::Internal(format!("ship {ship_id} disappeared after transit")))?
             };
 
             Ok(Json(ship_result))
@@ -554,7 +611,8 @@ async fn undock_ship(
 
             let ship_result = {
                 let ships = state.ships.read().await;
-                ships.get(&ship_id).cloned().unwrap()
+                ships.get(&ship_id).cloned()
+                    .ok_or_else(|| AppError::Internal(format!("ship {ship_id} disappeared after undock")))?
             };
 
             // Send ShipComplete webhook

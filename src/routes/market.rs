@@ -24,6 +24,7 @@ use crate::models::{
 };
 use crate::ship_lifecycle::{calculate_sol_to_planet_time, spawn_transit_to_origin};
 use crate::state::AppState;
+use crate::validation::validate_input;
 
 pub fn player_market_router() -> Router<AppState> {
     Router::new()
@@ -37,21 +38,32 @@ pub fn player_market_router() -> Router<AppState> {
 fn now_ms() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
+        .expect("system clock before UNIX epoch")
         .as_millis() as u64
 }
 
-#[derive(Debug, Deserialize)]
-struct OrderQuery {
-    status: Option<String>,
+#[derive(Debug, Deserialize, utoipa::IntoParams)]
+pub struct OrderQuery {
+    pub status: Option<String>,
 }
 
+#[utoipa::path(
+    post,
+    path = "/market/orders",
+    tag = "market",
+    security(("api_key" = [])),
+    request_body = PlaceOrderRequest,
+    responses(
+        (status = 201, description = "Order placed successfully", body = Order),
+    ),
+)]
 #[instrument(skip(state, auth))]
-async fn place_order(
+pub async fn place_order(
     State(state): State<AppState>,
     auth: AuthenticatedPlayer,
     Json(body): Json<PlaceOrderRequest>,
 ) -> Result<(StatusCode, Json<Order>), AppError> {
+    validate_input(&body)?;
     // Validate limit orders have a price
     if body.order_type == OrderType::Limit && body.price.is_none() {
         return Err(MarketError::PriceRequired.into());
@@ -90,7 +102,7 @@ async fn place_order(
     match body.side {
         OrderSide::Buy => {
             if body.order_type == OrderType::Limit {
-                let cost = body.price.unwrap() as i64 * body.quantity as i64;
+                let cost = body.price.expect("invariant: limit order has price") as i64 * body.quantity as i64;
                 let mut players = state.players.write().await;
                 let player = players
                     .get_mut(&auth.0.id)
@@ -309,8 +321,18 @@ async fn place_order(
     Ok((StatusCode::CREATED, Json(result_order)))
 }
 
+#[utoipa::path(
+    get,
+    path = "/market/orders",
+    tag = "market",
+    security(("api_key" = [])),
+    params(OrderQuery),
+    responses(
+        (status = 200, description = "List of player orders", body = Vec<Order>),
+    ),
+)]
 #[instrument(skip(state, auth))]
-async fn list_orders(
+pub async fn list_orders(
     State(state): State<AppState>,
     auth: AuthenticatedPlayer,
     Query(query): Query<OrderQuery>,
@@ -337,8 +359,20 @@ async fn list_orders(
     Json(orders)
 }
 
+#[utoipa::path(
+    get,
+    path = "/market/orders/{order_id}",
+    tag = "market",
+    security(("api_key" = [])),
+    params(
+        ("order_id" = Uuid, Path, description = "Order ID"),
+    ),
+    responses(
+        (status = 200, description = "Order details", body = Order),
+    ),
+)]
 #[instrument(skip(state, auth))]
-async fn get_order(
+pub async fn get_order(
     State(state): State<AppState>,
     auth: AuthenticatedPlayer,
     Path(order_id): Path<Uuid>,
@@ -355,8 +389,20 @@ async fn get_order(
     Ok(Json(order))
 }
 
+#[utoipa::path(
+    delete,
+    path = "/market/orders/{order_id}",
+    tag = "market",
+    security(("api_key" = [])),
+    params(
+        ("order_id" = Uuid, Path, description = "Order ID"),
+    ),
+    responses(
+        (status = 200, description = "Order cancelled", body = Order),
+    ),
+)]
 #[instrument(skip(state, auth))]
-async fn cancel_order(
+pub async fn cancel_order(
     State(state): State<AppState>,
     auth: AuthenticatedPlayer,
     Path(order_id): Path<Uuid>,
@@ -415,8 +461,20 @@ async fn cancel_order(
     Ok(Json(cancelled_order))
 }
 
+#[utoipa::path(
+    get,
+    path = "/market/book/{good_name}",
+    tag = "market",
+    security(("api_key" = [])),
+    params(
+        ("good_name" = String, Path, description = "Good name"),
+    ),
+    responses(
+        (status = 200, description = "Order book summary", body = OrderBookSummary),
+    ),
+)]
 #[instrument(skip(state))]
-async fn get_order_book(
+pub async fn get_order_book(
     State(state): State<AppState>,
     Path(good_name): Path<String>,
 ) -> Json<OrderBookSummary> {
@@ -448,8 +506,17 @@ async fn trade_stream(
     Sse::new(stream).keep_alive(KeepAlive::new().interval(Duration::from_secs(15)))
 }
 
+#[utoipa::path(
+    get,
+    path = "/market/prices",
+    tag = "market",
+    security(("api_key" = [])),
+    responses(
+        (status = 200, description = "Last trade prices by good name", body = HashMap<String, u64>),
+    ),
+)]
 #[instrument(skip(state))]
-async fn get_prices(State(state): State<AppState>) -> Json<HashMap<String, u64>> {
+pub async fn get_prices(State(state): State<AppState>) -> Json<HashMap<String, u64>> {
     let market = state.market.read().await;
     Json(market.last_prices.clone())
 }

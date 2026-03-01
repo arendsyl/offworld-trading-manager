@@ -1,8 +1,10 @@
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
+use validator::Validate;
 
 use super::{Settlement, SpaceElevator, Station};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(tag = "status", rename_all = "snake_case")]
 pub enum PlanetStatus {
     Uninhabited,
@@ -14,7 +16,7 @@ pub enum PlanetStatus {
     },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ClimateType {
     Arid,
@@ -26,7 +28,7 @@ pub enum ClimateType {
     Volcanic,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum GasGiantType {
     Jovian,
@@ -35,14 +37,14 @@ pub enum GasGiantType {
     HotJupiter,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(tag = "category", rename_all = "snake_case")]
 pub enum PlanetType {
     Telluric { climate: ClimateType },
     GasGiant { gas_type: GasGiantType },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Planet {
     pub id: String,
     pub name: String,
@@ -53,16 +55,19 @@ pub struct Planet {
     pub status: PlanetStatus,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Validate)]
 pub struct CreatePlanetRequest {
+    #[validate(length(min = 1, max = 128))]
     pub name: String,
     pub position: u32,
+    #[validate(range(min = 0.01, max = 1000.0))]
     pub distance_ua: f64,
     pub planet_type: PlanetType,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Validate)]
 pub struct UpdatePlanetRequest {
+    #[validate(length(min = 1, max = 128))]
     pub name: Option<String>,
     pub distance_ua: Option<f64>,
     pub planet_type: Option<PlanetType>,

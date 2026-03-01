@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProjectType {
     InstallStation,
@@ -14,7 +15,7 @@ pub enum ProjectType {
     UpgradeElevatorCabins,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProjectStatus {
     InTransit,
@@ -22,7 +23,7 @@ pub enum ProjectStatus {
     Complete,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ConstructionProject {
     pub id: Uuid,
     pub owner_id: String,
@@ -39,40 +40,34 @@ pub struct ConstructionProject {
     pub settlement_name: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InstallStationRequest {
-    pub source_planet_id: String,
-    pub target_planet_id: String,
-    pub station_name: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FoundSettlementRequest {
-    pub source_planet_id: String,
-    pub target_planet_id: String,
-    pub settlement_name: String,
-    pub station_name: String,
-    #[serde(default)]
-    pub extra_goods: HashMap<String, u64>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum StationUpgradeType {
-    DockingBays,
-    MassDriverChannels,
-    Storage,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UpgradeStationRequest {
-    pub planet_id: String,
-    pub upgrade_type: StationUpgradeType,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UpgradeElevatorRequest {
-    pub planet_id: String,
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(tag = "project_type", rename_all = "snake_case")]
+pub enum CreateProjectRequest {
+    InstallStation {
+        source_planet_id: String,
+        target_planet_id: String,
+        station_name: String,
+    },
+    FoundSettlement {
+        source_planet_id: String,
+        target_planet_id: String,
+        settlement_name: String,
+        station_name: String,
+        #[serde(default)]
+        extra_goods: HashMap<String, u64>,
+    },
+    UpgradeDockingBays {
+        planet_id: String,
+    },
+    UpgradeMassDriverChannels {
+        planet_id: String,
+    },
+    UpgradeStorage {
+        planet_id: String,
+    },
+    UpgradeElevatorCabins {
+        planet_id: String,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

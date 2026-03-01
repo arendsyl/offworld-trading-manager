@@ -14,6 +14,7 @@ use crate::models::{
     TransferRequest, TransferResult,
 };
 use crate::state::AppState;
+use crate::validation::validate_input;
 
 pub fn space_elevator_router() -> Router<AppState> {
     Router::new()
@@ -27,8 +28,21 @@ pub fn space_elevator_router() -> Router<AppState> {
         )
 }
 
+#[utoipa::path(
+    get,
+    path = "/settlements/{system_name}/{planet_id}/space-elevator",
+    tag = "space-elevator",
+    security(("api_key" = [])),
+    params(
+        ("system_name" = String, Path, description = "System name"),
+        ("planet_id" = String, Path, description = "Planet ID"),
+    ),
+    responses(
+        (status = 200, description = "Space elevator status", body = SpaceElevatorStatus),
+    ),
+)]
 #[instrument(skip(state, auth))]
-async fn get_space_elevator(
+pub async fn get_space_elevator(
     State(state): State<AppState>,
     auth: AuthenticatedPlayer,
     Path((system_name, planet_id)): Path<(String, String)>,
@@ -79,13 +93,28 @@ async fn get_space_elevator(
 /// Flow:
 /// - ToSurface: Station inventory -> Warehouse inventory
 /// - ToOrbit: Warehouse inventory -> Station inventory
+#[utoipa::path(
+    post,
+    path = "/settlements/{system_name}/{planet_id}/space-elevator/transfer",
+    tag = "space-elevator",
+    security(("api_key" = [])),
+    params(
+        ("system_name" = String, Path, description = "System name"),
+        ("planet_id" = String, Path, description = "Planet ID"),
+    ),
+    request_body = TransferRequest,
+    responses(
+        (status = 200, description = "Transfer result", body = TransferResult),
+    ),
+)]
 #[instrument(skip(state, auth, request), fields(direction = ?request.direction, item_count = request.items.len()))]
-async fn transfer(
+pub async fn transfer(
     State(state): State<AppState>,
     auth: AuthenticatedPlayer,
     Path((system_name, planet_id)): Path<(String, String)>,
     Json(request): Json<TransferRequest>,
 ) -> Result<Json<TransferResult>, AppError> {
+    validate_input(&request)?;
     debug!("Starting space elevator transfer");
     let items = request.items.clone();
 
@@ -155,7 +184,9 @@ async fn transfer(
                         }
                         // Deduct all items from station (reserve for transfer)
                         for item in &items {
-                            *station.inventory.get_mut(&item.good_name).unwrap() -= item.quantity;
+                            let entry = station.inventory.get_mut(&item.good_name)
+                                .ok_or_else(|| AppError::Internal(format!("inventory for {} disappeared after validation", item.good_name)))?;
+                            *entry -= item.quantity;
                         }
                         debug!(direction = "ToSurface", "Reserved items from station inventory");
                     }
@@ -190,7 +221,9 @@ async fn transfer(
                         }
                         // Deduct all items from warehouse (reserve for transfer)
                         for item in &items {
-                            *space_elevator.warehouse.inventory.get_mut(&item.good_name).unwrap() -= item.quantity;
+                            let entry = space_elevator.warehouse.inventory.get_mut(&item.good_name)
+                                .ok_or_else(|| AppError::Internal(format!("warehouse inventory for {} disappeared after validation", item.good_name)))?;
+                            *entry -= item.quantity;
                         }
                         debug!(direction = "ToOrbit", "Reserved items from warehouse inventory");
                     }

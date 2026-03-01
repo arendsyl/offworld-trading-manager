@@ -16,24 +16,25 @@ use crate::models::{
     PlayerSelfView, UpdatePlayerRequest,
 };
 use crate::state::AppState;
+use crate::validation::validate_input;
 
 pub fn admin_players_router() -> Router<AppState> {
     Router::new()
-        .route("/", get(list_players).post(create_player))
-        .route("/{player_id}", get(get_player).delete(delete_player))
+        .route("/", get(admin_list_players).post(admin_create_player))
+        .route("/{player_id}", get(admin_get_player).delete(admin_delete_player))
 }
 
 pub fn player_players_router() -> Router<AppState> {
     Router::new()
-        .route("/{player_id}", get(get_player_for_player).put(update_player))
-        .route("/{player_id}/regenerate-token", post(regenerate_token))
+        .route("/{player_id}", get(player_get_self).put(player_update_self))
+        .route("/{player_id}/regenerate-token", post(player_regenerate_token))
 }
 
 fn generate_biscuit(
     root: &biscuit_auth::KeyPair,
     player_id: &str,
     pulsar_config: &PulsarConfig,
-) -> String {
+) -> Result<String, AppError> {
     use biscuit_auth::macros::biscuit;
 
     let topic_receive = format!(
@@ -53,22 +54,46 @@ fn generate_biscuit(
         "#
     )
     .build(root)
-    .expect("failed to build biscuit token");
+    .map_err(|e| AppError::Internal(format!("failed to build biscuit token: {e}")))?;
 
-    biscuit.to_base64().expect("failed to serialize biscuit")
+    biscuit
+        .to_base64()
+        .map_err(|e| AppError::Internal(format!("failed to serialize biscuit: {e}")))
 }
 
 // --- Admin routes ---
 
+#[utoipa::path(
+    get,
+    path = "/admin/players",
+    tag = "players",
+    responses(
+        (status = 200, description = "List of players", body = Vec<PlayerPublic>),
+    ),
+    security(("bearer_auth" = [])),
+)]
 #[instrument(skip(state))]
-async fn list_players(State(state): State<AppState>) -> Json<Vec<PlayerPublic>> {
+pub async fn admin_list_players(State(state): State<AppState>) -> Json<Vec<PlayerPublic>> {
     let players = state.players.read().await;
     let public: Vec<PlayerPublic> = players.values().map(PlayerPublic::from).collect();
     Json(public)
 }
 
+#[utoipa::path(
+    get,
+    path = "/admin/players/{player_id}",
+    tag = "players",
+    params(
+        ("player_id" = String, Path, description = "Player ID"),
+    ),
+    responses(
+        (status = 200, description = "Player details", body = PlayerPublic),
+        (status = 404, description = "Player not found"),
+    ),
+    security(("bearer_auth" = [])),
+)]
 #[instrument(skip(state))]
-async fn get_player(
+pub async fn admin_get_player(
     State(state): State<AppState>,
     Path(player_id): Path<String>,
 ) -> Result<Json<PlayerPublic>, AppError> {
@@ -79,13 +104,25 @@ async fn get_player(
     Ok(Json(PlayerPublic::from(player)))
 }
 
+#[utoipa::path(
+    post,
+    path = "/admin/players",
+    tag = "players",
+    request_body = CreatePlayerRequest,
+    responses(
+        (status = 201, description = "Player created", body = PlayerSelfView),
+        (status = 409, description = "Player already exists"),
+    ),
+    security(("bearer_auth" = [])),
+)]
 #[instrument(skip(state))]
-async fn create_player(
+pub async fn admin_create_player(
     State(state): State<AppState>,
     Json(body): Json<CreatePlayerRequest>,
 ) -> Result<(StatusCode, Json<PlayerSelfView>), AppError> {
+    validate_input(&body)?;
     let api_key = Uuid::new_v4().to_string();
-    let biscuit_token = generate_biscuit(&state.biscuit_root, &body.id, &state.config.pulsar);
+    let biscuit_token = generate_biscuit(&state.biscuit_root, &body.id, &state.config.pulsar)?;
 
     let player = Player {
         id: body.id.clone(),
@@ -120,8 +157,21 @@ async fn create_player(
     Ok((StatusCode::CREATED, Json(view)))
 }
 
+#[utoipa::path(
+    delete,
+    path = "/admin/players/{player_id}",
+    tag = "players",
+    params(
+        ("player_id" = String, Path, description = "Player ID"),
+    ),
+    responses(
+        (status = 204, description = "Player deleted"),
+        (status = 404, description = "Player not found"),
+    ),
+    security(("bearer_auth" = [])),
+)]
 #[instrument(skip(state))]
-async fn delete_player(
+pub async fn admin_delete_player(
     State(state): State<AppState>,
     Path(player_id): Path<String>,
 ) -> Result<StatusCode, AppError> {
@@ -239,8 +289,22 @@ async fn delete_player(
 
 // --- Player routes ---
 
+#[utoipa::path(
+    get,
+    path = "/players/{player_id}",
+    tag = "players",
+    params(
+        ("player_id" = String, Path, description = "Player ID"),
+    ),
+    responses(
+        (status = 200, description = "Player self view", body = PlayerSelfView),
+        (status = 403, description = "Forbidden"),
+        (status = 404, description = "Player not found"),
+    ),
+    security(("api_key" = [])),
+)]
 #[instrument(skip(state, auth))]
-async fn get_player_for_player(
+pub async fn player_get_self(
     State(state): State<AppState>,
     auth: AuthenticatedPlayer,
     Path(player_id): Path<String>,
@@ -255,13 +319,29 @@ async fn get_player_for_player(
     Ok(Json(PlayerSelfView::from(player)))
 }
 
+#[utoipa::path(
+    put,
+    path = "/players/{player_id}",
+    tag = "players",
+    params(
+        ("player_id" = String, Path, description = "Player ID"),
+    ),
+    request_body = UpdatePlayerRequest,
+    responses(
+        (status = 200, description = "Player updated", body = PlayerSelfView),
+        (status = 403, description = "Forbidden"),
+        (status = 404, description = "Player not found"),
+    ),
+    security(("api_key" = [])),
+)]
 #[instrument(skip(state, auth))]
-async fn update_player(
+pub async fn player_update_self(
     State(state): State<AppState>,
     auth: AuthenticatedPlayer,
     Path(player_id): Path<String>,
     Json(body): Json<UpdatePlayerRequest>,
 ) -> Result<(StatusCode, Json<PlayerSelfView>), AppError> {
+    validate_input(&body)?;
     if auth.0.id != player_id {
         return Err(AppError::Forbidden);
     }
@@ -282,8 +362,22 @@ async fn update_player(
     Ok((StatusCode::OK, Json(view)))
 }
 
+#[utoipa::path(
+    post,
+    path = "/players/{player_id}/regenerate-token",
+    tag = "players",
+    params(
+        ("player_id" = String, Path, description = "Player ID"),
+    ),
+    responses(
+        (status = 200, description = "Token regenerated", body = PlayerSelfView),
+        (status = 403, description = "Forbidden"),
+        (status = 404, description = "Player not found"),
+    ),
+    security(("api_key" = [])),
+)]
 #[instrument(skip(state, auth))]
-async fn regenerate_token(
+pub async fn player_regenerate_token(
     State(state): State<AppState>,
     auth: AuthenticatedPlayer,
     Path(player_id): Path<String>,

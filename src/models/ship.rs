@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
+use validator::Validate;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ShipStatus {
     InTransitToOrigin,
@@ -17,7 +19,7 @@ pub enum ShipStatus {
     Complete,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Ship {
     pub id: Uuid,
     pub owner_id: String,
@@ -33,19 +35,21 @@ pub struct Ship {
     pub operation_complete_at: Option<u64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Validate)]
 pub struct CreateTruckingRequest {
+    #[validate(length(min = 1, max = 128))]
     pub destination_planet_id: String,
+    #[validate(length(min = 1, max = 128))]
     pub origin_planet_id: String,
     pub cargo: HashMap<String, u64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct DockRequest {
     pub authorized: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct UndockRequest {
     pub authorized: bool,
 }

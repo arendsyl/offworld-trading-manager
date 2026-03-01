@@ -15,25 +15,41 @@ use crate::models::{
     ShipStatus, SpaceElevator, SpaceElevatorConfig, Station, Warehouse,
 };
 use crate::state::AppState;
+use crate::validation::validate_input;
 
 pub fn admin_stations_router() -> Router<AppState> {
     Router::new().route(
         "/{system_name}/{planet_id}/station",
-        get(get_station)
-            .put(create_or_update_station)
-            .delete(delete_station),
+        get(admin_get_station)
+            .put(admin_create_station)
+            .delete(admin_delete_station),
     )
 }
 
 pub fn player_stations_router() -> Router<AppState> {
     Router::new().route(
         "/{system_name}/{planet_id}/station",
-        get(get_station_for_player),
+        get(player_get_station),
     )
 }
 
+#[utoipa::path(
+    get,
+    path = "/settlements/{system_name}/{planet_id}/station",
+    tag = "stations",
+    params(
+        ("system_name" = String, Path, description = "System name"),
+        ("planet_id" = String, Path, description = "Planet ID"),
+    ),
+    responses(
+        (status = 200, description = "Station found", body = Station),
+        (status = 403, description = "Forbidden"),
+        (status = 404, description = "Station not found"),
+    ),
+    security(("api_key" = [])),
+)]
 #[instrument(skip(state, auth))]
-async fn get_station_for_player(
+pub async fn player_get_station(
     State(state): State<AppState>,
     auth: AuthenticatedPlayer,
     Path((system_name, planet_id)): Path<(String, String)>,
@@ -69,8 +85,22 @@ async fn get_station_for_player(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/admin/settlements/{system_name}/{planet_id}/station",
+    tag = "stations",
+    params(
+        ("system_name" = String, Path, description = "System name"),
+        ("planet_id" = String, Path, description = "Planet ID"),
+    ),
+    responses(
+        (status = 200, description = "Station found", body = Station),
+        (status = 404, description = "Station not found"),
+    ),
+    security(("bearer_auth" = [])),
+)]
 #[instrument(skip(state))]
-async fn get_station(
+pub async fn admin_get_station(
     State(state): State<AppState>,
     Path((system_name, planet_id)): Path<(String, String)>,
 ) -> Result<Json<Station>, AppError> {
@@ -104,12 +134,30 @@ async fn get_station(
     }
 }
 
+#[utoipa::path(
+    put,
+    path = "/admin/settlements/{system_name}/{planet_id}/station",
+    tag = "stations",
+    params(
+        ("system_name" = String, Path, description = "System name"),
+        ("planet_id" = String, Path, description = "Planet ID"),
+    ),
+    request_body = CreateStationRequest,
+    responses(
+        (status = 201, description = "Station created successfully", body = Station),
+        (status = 200, description = "Station updated successfully", body = Station),
+        (status = 404, description = "Planet not found"),
+        (status = 409, description = "Settlement required"),
+    ),
+    security(("bearer_auth" = [])),
+)]
 #[instrument(skip(state, payload))]
-async fn create_or_update_station(
+pub async fn admin_create_station(
     State(state): State<AppState>,
     Path((system_name, planet_id)): Path<(String, String)>,
     Json(payload): Json<CreateStationRequest>,
 ) -> Result<(StatusCode, Json<Station>), AppError> {
+    validate_input(&payload)?;
     debug!(station_name = %payload.name, "Creating or updating station");
     let default_channels = state.config.mass_driver.default_channels;
     let mut galaxy = state.galaxy.write().await;
@@ -188,8 +236,23 @@ async fn create_or_update_station(
     Ok((status, Json(result_station)))
 }
 
+#[utoipa::path(
+    delete,
+    path = "/admin/settlements/{system_name}/{planet_id}/station",
+    tag = "stations",
+    params(
+        ("system_name" = String, Path, description = "System name"),
+        ("planet_id" = String, Path, description = "Planet ID"),
+    ),
+    responses(
+        (status = 204, description = "Station deleted successfully"),
+        (status = 404, description = "Station not found"),
+        (status = 409, description = "Station has active ships"),
+    ),
+    security(("bearer_auth" = [])),
+)]
 #[instrument(skip(state))]
-async fn delete_station(
+pub async fn admin_delete_station(
     State(state): State<AppState>,
     Path((system_name, planet_id)): Path<(String, String)>,
 ) -> Result<StatusCode, AppError> {

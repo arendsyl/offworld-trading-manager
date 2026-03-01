@@ -13,6 +13,7 @@ use crate::models::{
     CreateTradeRequestBody, PlanetStatus, TradeRequest, TradeRequestMode, TradeRequestStatus,
 };
 use crate::state::AppState;
+use crate::validation::validate_input;
 use crate::trade_lifecycle::spawn_trade_request_loop;
 
 pub fn player_trade_router() -> Router<AppState> {
@@ -27,16 +28,27 @@ pub fn player_trade_router() -> Router<AppState> {
 fn now_ms() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
+        .expect("system clock before UNIX epoch")
         .as_millis() as u64
 }
 
+#[utoipa::path(
+    post,
+    path = "/trade",
+    tag = "trade",
+    security(("api_key" = [])),
+    request_body = CreateTradeRequestBody,
+    responses(
+        (status = 201, description = "Trade request created", body = TradeRequest),
+    ),
+)]
 #[instrument(skip(state, auth))]
-async fn create_trade_request(
+pub async fn create_trade_request(
     State(state): State<AppState>,
     auth: AuthenticatedPlayer,
     Json(body): Json<CreateTradeRequestBody>,
 ) -> Result<(StatusCode, Json<TradeRequest>), AppError> {
+    validate_input(&body)?;
     // Validate mode-specific fields
     if body.rate_per_tick == 0 {
         return Err(TradeRequestError::ZeroRate.into());
@@ -120,8 +132,17 @@ async fn create_trade_request(
     Ok((StatusCode::CREATED, Json(request)))
 }
 
+#[utoipa::path(
+    get,
+    path = "/trade",
+    tag = "trade",
+    security(("api_key" = [])),
+    responses(
+        (status = 200, description = "List of trade requests", body = Vec<TradeRequest>),
+    ),
+)]
 #[instrument(skip(state, auth))]
-async fn list_trade_requests(
+pub async fn list_trade_requests(
     State(state): State<AppState>,
     auth: AuthenticatedPlayer,
 ) -> Json<Vec<TradeRequest>> {
@@ -134,8 +155,20 @@ async fn list_trade_requests(
     Json(result)
 }
 
+#[utoipa::path(
+    get,
+    path = "/trade/{request_id}",
+    tag = "trade",
+    security(("api_key" = [])),
+    params(
+        ("request_id" = Uuid, Path, description = "Trade request ID"),
+    ),
+    responses(
+        (status = 200, description = "Trade request details", body = TradeRequest),
+    ),
+)]
 #[instrument(skip(state, auth))]
-async fn get_trade_request(
+pub async fn get_trade_request(
     State(state): State<AppState>,
     auth: AuthenticatedPlayer,
     Path(request_id): Path<Uuid>,
@@ -150,8 +183,20 @@ async fn get_trade_request(
     Ok(Json(request.clone()))
 }
 
+#[utoipa::path(
+    delete,
+    path = "/trade/{request_id}",
+    tag = "trade",
+    security(("api_key" = [])),
+    params(
+        ("request_id" = Uuid, Path, description = "Trade request ID"),
+    ),
+    responses(
+        (status = 200, description = "Trade request cancelled", body = TradeRequest),
+    ),
+)]
 #[instrument(skip(state, auth))]
-async fn cancel_trade_request(
+pub async fn cancel_trade_request(
     State(state): State<AppState>,
     auth: AuthenticatedPlayer,
     Path(request_id): Path<Uuid>,

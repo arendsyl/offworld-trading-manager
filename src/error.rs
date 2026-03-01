@@ -6,6 +6,7 @@ use axum::{
 use serde::Serialize;
 use thiserror::Error;
 use tracing::warn;
+use utoipa::ToSchema;
 
 use crate::models::SpaceElevatorError;
 
@@ -201,10 +202,16 @@ pub enum AppError {
 
     #[error("Station has active ships and cannot be deleted: {0}")]
     StationHasActiveShips(String),
+
+    #[error("Internal server error: {0}")]
+    Internal(String),
+
+    #[error("Validation error: {0}")]
+    Validation(String),
 }
 
-#[derive(Serialize)]
-struct ErrorResponse {
+#[derive(Serialize, ToSchema)]
+pub struct ErrorResponse {
     error: String,
 }
 
@@ -310,6 +317,8 @@ impl IntoResponse for AppError {
                 };
                 (status, self.to_string())
             }
+            AppError::Internal(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
+            AppError::Validation(_) => (StatusCode::UNPROCESSABLE_ENTITY, self.to_string()),
         };
 
         (status, Json(ErrorResponse { error: message })).into_response()

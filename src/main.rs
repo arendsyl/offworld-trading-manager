@@ -7,15 +7,19 @@ use tokio::sync::RwLock;
 use tracing::{info, error, warn};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
+
+use offworld_trading_manager::api_doc::ApiDoc;
 use offworld_trading_manager::config::load_config;
 use offworld_trading_manager::consumer::spawn_send_consumer;
 use offworld_trading_manager::market::MarketState;
 use offworld_trading_manager::pulsar::PulsarManager;
 use offworld_trading_manager::auth::{admin_auth_middleware, player_auth_middleware};
 use offworld_trading_manager::routes::{
-    admin_connections_router, admin_planets_router, admin_players_router,
+    admin_connections_router, admin_persistence_router, admin_planets_router, admin_players_router,
     admin_settlements_router, admin_stations_router, admin_systems_router,
-    player_construction_router, player_leaderboard_router, player_market_router, player_planets_router, player_trade_router,
+    player_projects_router, player_leaderboard_router, player_market_router, player_planets_router, player_trade_router,
     player_players_router, player_settlements_router, player_ships_router,
     player_stations_router, player_systems_router, player_trucking_router,
     space_elevator_router,
@@ -131,14 +135,44 @@ async fn main() {
                     "#
                 )
                 .build(&biscuit_root)
-                .expect("failed to build biscuit token");
-                player.pulsar_biscuit = token.to_base64().expect("failed to serialize biscuit");
+                .unwrap_or_else(|e| {
+                    error!(player_id = %player.id, error = %e, "Failed to build biscuit token");
+                    std::process::exit(1);
+                });
+                player.pulsar_biscuit = token.to_base64().unwrap_or_else(|e| {
+                    error!(player_id = %player.id, error = %e, "Failed to serialize biscuit");
+                    std::process::exit(1);
+                });
             }
         }
     }
 
     let trade_channel_capacity = config.market.trade_channel_capacity;
+    let database_config = config.database.clone();
     let config = Arc::new(config);
+
+    // Connect to PostgreSQL if DATABASE_URL is configured
+    let db = if let Some(ref url) = database_config.url {
+        match sqlx::PgPool::connect(url).await {
+            Ok(pool) => {
+                info!("PostgreSQL connected, running migrations");
+                sqlx::migrate!()
+                    .run(&pool)
+                    .await
+                    .unwrap_or_else(|e| {
+                        error!(error = %e, "Failed to run database migrations");
+                        std::process::exit(1);
+                    });
+                Some(pool)
+            }
+            Err(e) => {
+                warn!(error = %e, "Failed to connect to PostgreSQL, running without persistence");
+                None
+            }
+        }
+    } else {
+        None
+    };
 
     // Try to connect to Pulsar
     let pulsar = match PulsarManager::new(config.pulsar.clone()).await {
@@ -163,6 +197,7 @@ async fn main() {
         config: config.clone(),
         http_client: reqwest::Client::new(),
         biscuit_root,
+        db: db.clone(),
     };
 
     // Spawn consumers for each player if Pulsar is available
@@ -187,6 +222,7 @@ async fn main() {
         )
         .nest("/connections", admin_connections_router())
         .nest("/players", admin_players_router())
+        .nest("/persistence", admin_persistence_router())
         .layer(axum::middleware::from_fn_with_state(app_state.clone(), admin_auth_middleware));
 
     let player_router = Router::new()
@@ -201,17 +237,47 @@ async fn main() {
         .nest("/ships", player_ships_router())
         .nest("/trucking", player_trucking_router())
         .nest("/market", player_market_router())
-        .nest("/construction", player_construction_router())
+        .nest("/projects", player_projects_router())
         .nest("/trade", player_trade_router())
         .nest("/leaderboard", player_leaderboard_router())
         .layer(axum::middleware::from_fn_with_state(app_state.clone(), player_auth_middleware));
 
+    // Spawn auto-save task if configured and DB is available
+    if let (Some(pool), Some(interval_secs)) = (&db, database_config.auto_save_interval_secs) {
+        let state_for_save = app_state.clone();
+        let pool_for_save = pool.clone();
+        tokio::spawn(async move {
+            let interval = std::time::Duration::from_secs(interval_secs);
+            loop {
+                tokio::time::sleep(interval).await;
+                match offworld_trading_manager::persistence::save_snapshot(
+                    &state_for_save,
+                    &pool_for_save,
+                    Some("auto-save"),
+                )
+                .await
+                {
+                    Ok(id) => info!(snapshot_id = id, "Auto-save completed"),
+                    Err(e) => error!(error = %e, "Auto-save failed"),
+                }
+            }
+        });
+        info!(interval_secs = interval_secs, "Auto-save task started");
+    }
+
     let app = Router::new()
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-doc/openapi.json", ApiDoc::openapi()))
         .nest("/admin", admin_router)
         .merge(player_router)
         .with_state(app_state);
 
-    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
+    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap_or_else(|e| {
+        error!(address = %addr, error = %e, "Failed to bind to address");
+        std::process::exit(1);
+    });
     info!(address = %addr, "Server running");
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(listener, app).await.unwrap_or_else(|e| {
+        error!(error = %e, "Server error");
+        std::process::exit(1);
+    });
 }

@@ -6,12 +6,14 @@ use axum::{
 };
 use serde::Deserialize;
 use tracing::{debug, info, warn, instrument};
+use utoipa::IntoParams;
 
 use crate::error::AppError;
 use crate::models::{CreatePlanetRequest, Planet, PlanetStatus, PlanetType, UpdatePlanetRequest};
 use crate::state::AppState;
+use crate::validation::validate_input;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, IntoParams)]
 pub struct PlanetFilter {
     pub planet_type: Option<String>,
 }
@@ -34,12 +36,26 @@ fn generate_planet_id(star_name: &str, position: u32) -> String {
     format!("{}-{}", star_name, position)
 }
 
+#[utoipa::path(
+    post,
+    path = "/admin/systems/{system_name}/planets",
+    tag = "planets",
+    params(
+        ("system_name" = String, Path, description = "Name of the star system"),
+    ),
+    request_body = CreatePlanetRequest,
+    responses(
+        (status = 201, description = "Planet created successfully", body = Planet),
+    ),
+    security(("bearer_auth" = [])),
+)]
 #[instrument(skip(state, payload), fields(planet_name = %payload.name))]
-async fn create_planet(
+pub async fn create_planet(
     State(state): State<AppState>,
     Path(system_name): Path<String>,
     Json(payload): Json<CreatePlanetRequest>,
 ) -> Result<(StatusCode, Json<Planet>), AppError> {
+    validate_input(&payload)?;
     debug!("Creating new planet");
     let mut state = state.galaxy.write().await;
     let system = state
@@ -69,8 +85,21 @@ async fn create_planet(
     Ok((StatusCode::CREATED, Json(planet)))
 }
 
+#[utoipa::path(
+    get,
+    path = "/systems/{system_name}/planets",
+    tag = "planets",
+    params(
+        ("system_name" = String, Path, description = "Name of the star system"),
+        PlanetFilter,
+    ),
+    responses(
+        (status = 200, description = "List of planets", body = Vec<Planet>),
+    ),
+    security(("api_key" = [])),
+)]
 #[instrument(skip(state))]
-async fn list_planets(
+pub async fn list_planets(
     State(state): State<AppState>,
     Path(system_name): Path<String>,
     Query(filter): Query<PlanetFilter>,
@@ -103,8 +132,21 @@ async fn list_planets(
     Ok(Json(planets))
 }
 
+#[utoipa::path(
+    get,
+    path = "/systems/{system_name}/planets/{planet_id}",
+    tag = "planets",
+    params(
+        ("system_name" = String, Path, description = "Name of the star system"),
+        ("planet_id" = String, Path, description = "ID of the planet"),
+    ),
+    responses(
+        (status = 200, description = "Planet details", body = Planet),
+    ),
+    security(("api_key" = [])),
+)]
 #[instrument(skip(state))]
-async fn get_planet(
+pub async fn get_planet(
     State(state): State<AppState>,
     Path((system_name, planet_id)): Path<(String, String)>,
 ) -> Result<Json<Planet>, AppError> {
@@ -133,12 +175,27 @@ async fn get_planet(
     }
 }
 
+#[utoipa::path(
+    put,
+    path = "/admin/systems/{system_name}/planets/{planet_id}",
+    tag = "planets",
+    params(
+        ("system_name" = String, Path, description = "Name of the star system"),
+        ("planet_id" = String, Path, description = "ID of the planet"),
+    ),
+    request_body = UpdatePlanetRequest,
+    responses(
+        (status = 200, description = "Planet updated successfully", body = Planet),
+    ),
+    security(("bearer_auth" = [])),
+)]
 #[instrument(skip(state, payload))]
-async fn update_planet(
+pub async fn update_planet(
     State(state): State<AppState>,
     Path((system_name, planet_id)): Path<(String, String)>,
     Json(payload): Json<UpdatePlanetRequest>,
 ) -> Result<Json<Planet>, AppError> {
+    validate_input(&payload)?;
     debug!("Updating planet");
     let mut state = state.galaxy.write().await;
     let system = state
@@ -166,8 +223,21 @@ async fn update_planet(
     Ok(Json(planet.clone()))
 }
 
+#[utoipa::path(
+    delete,
+    path = "/admin/systems/{system_name}/planets/{planet_id}",
+    tag = "planets",
+    params(
+        ("system_name" = String, Path, description = "Name of the star system"),
+        ("planet_id" = String, Path, description = "ID of the planet"),
+    ),
+    responses(
+        (status = 204, description = "Planet deleted successfully"),
+    ),
+    security(("bearer_auth" = [])),
+)]
 #[instrument(skip(state))]
-async fn delete_planet(
+pub async fn delete_planet(
     State(state): State<AppState>,
     Path((system_name, planet_id)): Path<(String, String)>,
 ) -> Result<StatusCode, AppError> {

@@ -1,10 +1,12 @@
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
+use utoipa::ToSchema;
+use validator::Validate;
 
 use super::Warehouse;
 
 /// Configuration for the space elevator behavior
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct SpaceElevatorConfig {
     /// Number of cabins available
     pub cabin_count: usize,
@@ -31,7 +33,7 @@ impl Default for SpaceElevatorConfig {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum CabinState {
     Available,
@@ -94,7 +96,7 @@ impl Cabin {
 }
 
 /// Serializable cabin status for API responses
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct CabinStatus {
     pub id: usize,
     pub state: CabinState,
@@ -119,11 +121,12 @@ impl From<&Cabin> for CabinStatus {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct SpaceElevator {
     pub warehouse: Warehouse,
     pub config: SpaceElevatorConfig,
     #[serde(skip)]
+    #[schema(ignore)]
     pub cabins: Vec<Cabin>,
 }
 
@@ -212,14 +215,14 @@ impl SpaceElevator {
 }
 
 /// Serializable space elevator status for API responses
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct SpaceElevatorStatus {
     pub warehouse: Warehouse,
     pub config: SpaceElevatorConfig,
     pub cabins: Vec<CabinStatus>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum TransferDirection {
     /// Station -> SpaceElevator -> Warehouse -> Planet economy (export from station)
@@ -229,20 +232,24 @@ pub enum TransferDirection {
 }
 
 /// A single item in a transfer (good name and quantity)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Validate)]
 pub struct TransferItem {
+    #[validate(length(min = 1, max = 64))]
     pub good_name: String,
+    #[validate(range(min = 1))]
     pub quantity: u64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Validate)]
 pub struct TransferRequest {
     pub direction: TransferDirection,
     /// List of goods to transfer
+    #[validate(length(min = 1))]
+    #[validate(nested)]
     pub items: Vec<TransferItem>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct TransferResult {
     pub success: bool,
     pub cabin_id: usize,

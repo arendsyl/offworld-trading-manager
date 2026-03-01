@@ -123,7 +123,7 @@ pub fn spawn_ship_transit(
                 ship.status = ShipStatus::AwaitingDockingAuth;
                 let now = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
+                    .expect("system clock before UNIX epoch")
                     .as_millis() as u64;
                 ship.arrival_at = Some(now);
 

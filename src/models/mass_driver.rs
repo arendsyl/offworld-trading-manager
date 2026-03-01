@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
+use validator::Validate;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct MassDriver {
     pub max_channels: u32,
 }
@@ -23,7 +25,7 @@ impl MassDriver {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ConnectionStatus {
     Pending,
@@ -31,7 +33,7 @@ pub enum ConnectionStatus {
     Closed,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct MassDriverConnection {
     pub id: Uuid,
     pub system: String,
@@ -40,14 +42,17 @@ pub struct MassDriverConnection {
     pub status: ConnectionStatus,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Validate)]
 pub struct CreateConnectionRequest {
+    #[validate(length(min = 1, max = 128))]
     pub system: String,
+    #[validate(length(min = 1, max = 128))]
     pub from_planet: String,
+    #[validate(length(min = 1, max = 128))]
     pub to_planet: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ConnectionAction {
     Accept,
@@ -55,12 +60,12 @@ pub enum ConnectionAction {
     Close,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct UpdateConnectionRequest {
     pub action: ConnectionAction,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PacketItem {
     pub good_name: String,
     pub quantity: u64,
