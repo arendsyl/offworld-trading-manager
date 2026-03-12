@@ -299,8 +299,12 @@ impl Default for ConstructionConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct DatabaseConfig {
-    pub url: Option<String>,
+pub struct S3Config {
+    pub bucket: Option<String>,
+    pub endpoint: Option<String>,
+    pub region: Option<String>,
+    pub access_key_id: Option<String>,
+    pub secret_access_key: Option<String>,
     pub auto_save_interval_secs: Option<u64>,
 }
 
@@ -328,7 +332,11 @@ pub struct AppConfig {
     #[serde(default)]
     pub trade: TradeConfig,
     #[serde(default)]
-    pub database: DatabaseConfig,
+    pub economy: crate::economy::GlobalEconomyConfig,
+    #[serde(default)]
+    pub s3: S3Config,
+    #[serde(default)]
+    pub save_name: Option<String>,
 }
 
 fn default_port() -> u16 {
@@ -349,7 +357,9 @@ impl Default for AppConfig {
             admin: AdminConfig::default(),
             construction: ConstructionConfig::default(),
             trade: TradeConfig::default(),
-            database: DatabaseConfig::default(),
+            economy: crate::economy::GlobalEconomyConfig::default(),
+            s3: S3Config::default(),
+            save_name: None,
         }
     }
 }
@@ -384,8 +394,31 @@ pub fn load_config(
     if let Ok(key) = std::env::var("BISCUIT_PRIVATE_KEY") {
         config.admin.biscuit_private_key_hex = key;
     }
-    if let Ok(url) = std::env::var("DATABASE_URL") {
-        config.database.url = Some(url);
+    if let Ok(bucket) = std::env::var("S3_BUCKET") {
+        config.s3.bucket = Some(bucket);
+    }
+    if let Ok(endpoint) = std::env::var("S3_ENDPOINT") {
+        config.s3.endpoint = Some(endpoint);
+    }
+    if let Ok(region) = std::env::var("AWS_REGION") {
+        config.s3.region = Some(region);
+    }
+    if let Ok(key) = std::env::var("AWS_ACCESS_KEY_ID") {
+        config.s3.access_key_id = Some(key);
+    }
+    if let Ok(secret) = std::env::var("AWS_SECRET_ACCESS_KEY") {
+        config.s3.secret_access_key = Some(secret);
+    }
+
+    // ENV overrides for economy data paths
+    if let Ok(path) = std::env::var("FACTORY_TYPES_PATH") {
+        config.economy.factory_types_path = path;
+    }
+    if let Ok(path) = std::env::var("CONSUMPTIONS_PATH") {
+        config.economy.consumptions_path = path;
+    }
+    if let Ok(path) = std::env::var("GOODS_PATH") {
+        config.economy.goods_path = path;
     }
 
     // CLI overrides
@@ -399,5 +432,62 @@ pub fn load_config(
         config.seed = Some(seed.to_string());
     }
 
+    // Load economy JSON data files
+    load_economy_data(&mut config.economy);
+
     config
+}
+
+fn load_economy_data(economy: &mut crate::economy::GlobalEconomyConfig) {
+    use crate::economy::config::{FactoryTypeConfig, GoodConfig};
+
+    // Load factory types from JSON if not already populated (e.g. by TOML inline)
+    if economy.factory_types.is_empty() {
+        let path = &economy.factory_types_path;
+        match std::fs::read_to_string(path) {
+            Ok(content) => {
+                economy.factory_types = serde_json::from_str::<Vec<FactoryTypeConfig>>(&content)
+                    .unwrap_or_else(|e| panic!("Failed to parse {}: {}", path, e));
+            }
+            Err(e) => {
+                tracing::warn!("Could not read factory types from {}: {} — using empty list", path, e);
+            }
+        }
+    }
+
+    // Load consumption profiles from JSON if not already populated
+    if economy.consumption_profiles.is_empty() {
+        let path = &economy.consumptions_path;
+        match std::fs::read_to_string(path) {
+            Ok(content) => {
+                economy.consumption_profiles = serde_json::from_str(&content)
+                    .unwrap_or_else(|e| panic!("Failed to parse {}: {}", path, e));
+            }
+            Err(e) => {
+                tracing::warn!("Could not read consumption profiles from {}: {} — using empty map", path, e);
+            }
+        }
+    }
+
+    // Load goods registry from JSON if not already populated
+    if economy.goods.is_empty() {
+        let path = &economy.goods_path;
+        match std::fs::read_to_string(path) {
+            Ok(content) => {
+                economy.goods = serde_json::from_str::<Vec<GoodConfig>>(&content)
+                    .unwrap_or_else(|e| panic!("Failed to parse {}: {}", path, e));
+            }
+            Err(e) => {
+                tracing::warn!("Could not read goods from {}: {}", path, e);
+            }
+        }
+    }
+
+    // Build transient goods set from registry
+    economy.transient_goods = economy
+        .goods
+        .iter()
+        .filter(|g| g.transient)
+        .map(|g| g.id.clone())
+        .collect();
 }

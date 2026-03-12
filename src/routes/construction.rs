@@ -290,6 +290,8 @@ async fn create_install_station(
     let now = now_ms();
     let completion_at = now + ((transit_secs + build_secs) * 1000.0) as u64;
 
+    let callback_url = get_callback_url(&state, &auth.0.id).await;
+
     let project = ConstructionProject {
         id: Uuid::new_v4(),
         owner_id: auth.0.id.clone(),
@@ -304,6 +306,8 @@ async fn create_install_station(
         completion_at,
         station_name: Some(station_name),
         settlement_name: None,
+        transit_ends_at: Some(now + (transit_secs * 1000.0) as u64),
+        callback_url: callback_url.clone(),
     };
 
     let project_id = project.id;
@@ -311,8 +315,6 @@ async fn create_install_station(
         let mut projects = state.projects.write().await;
         projects.insert(project_id, project.clone());
     }
-
-    let callback_url = get_callback_url(&state, &auth.0.id).await;
 
     spawn_construction_project(
         state.projects.clone(),
@@ -407,6 +409,8 @@ async fn create_found_settlement(
     let now = now_ms();
     let completion_at = now + ((transit_secs + build_secs) * 1000.0) as u64;
 
+    let callback_url = get_callback_url(&state, &auth.0.id).await;
+
     let project = ConstructionProject {
         id: Uuid::new_v4(),
         owner_id: auth.0.id.clone(),
@@ -421,6 +425,8 @@ async fn create_found_settlement(
         completion_at,
         station_name: Some(station_name),
         settlement_name: Some(settlement_name),
+        transit_ends_at: Some(now + (transit_secs * 1000.0) as u64),
+        callback_url: callback_url.clone(),
     };
 
     let project_id = project.id;
@@ -428,8 +434,6 @@ async fn create_found_settlement(
         let mut projects = state.projects.write().await;
         projects.insert(project_id, project.clone());
     }
-
-    let callback_url = get_callback_url(&state, &auth.0.id).await;
 
     spawn_construction_project(
         state.projects.clone(),
@@ -501,6 +505,8 @@ async fn create_upgrade_station(
     let now = now_ms();
     let completion_at = now + (build_secs * 1000.0) as u64;
 
+    let callback_url = get_callback_url(&state, &auth.0.id).await;
+
     let project = ConstructionProject {
         id: Uuid::new_v4(),
         owner_id: auth.0.id.clone(),
@@ -515,6 +521,8 @@ async fn create_upgrade_station(
         completion_at,
         station_name: None,
         settlement_name: None,
+        transit_ends_at: None,
+        callback_url: callback_url.clone(),
     };
 
     let project_id = project.id;
@@ -522,8 +530,6 @@ async fn create_upgrade_station(
         let mut projects = state.projects.write().await;
         projects.insert(project_id, project.clone());
     }
-
-    let callback_url = get_callback_url(&state, &auth.0.id).await;
 
     spawn_upgrade_project(
         state.projects.clone(),
@@ -575,6 +581,8 @@ async fn create_upgrade_elevator(
     let now = now_ms();
     let completion_at = now + (build_secs * 1000.0) as u64;
 
+    let callback_url = get_callback_url(&state, &auth.0.id).await;
+
     let project = ConstructionProject {
         id: Uuid::new_v4(),
         owner_id: auth.0.id.clone(),
@@ -589,6 +597,8 @@ async fn create_upgrade_elevator(
         completion_at,
         station_name: None,
         settlement_name: None,
+        transit_ends_at: None,
+        callback_url: callback_url.clone(),
     };
 
     let project_id = project.id;
@@ -596,8 +606,6 @@ async fn create_upgrade_elevator(
         let mut projects = state.projects.write().await;
         projects.insert(project_id, project.clone());
     }
-
-    let callback_url = get_callback_url(&state, &auth.0.id).await;
 
     spawn_upgrade_project(
         state.projects.clone(),

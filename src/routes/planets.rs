@@ -75,6 +75,8 @@ pub async fn create_planet(
         name: payload.name,
         position: payload.position,
         distance_ua: payload.distance_ua,
+        resources: payload.resources.unwrap_or_default(),
+        economy_config: payload.economy_config.unwrap_or_default(),
         planet_type: payload.planet_type,
         status: PlanetStatus::Uninhabited,
     };
@@ -217,6 +219,9 @@ pub async fn update_planet(
     }
     if let Some(planet_type) = payload.planet_type {
         planet.planet_type = planet_type;
+    }
+    if let Some(economy_config) = payload.economy_config {
+        planet.economy_config = economy_config;
     }
 
     info!(planet_id = %planet_id, "Planet updated successfully");

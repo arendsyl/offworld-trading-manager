@@ -103,6 +103,7 @@ pub async fn create_trucking(
             .unwrap_or_default()
     };
 
+    let now = now_ms();
     let ship = Ship {
         id: Uuid::new_v4(),
         owner_id: auth.0.id.clone(),
@@ -113,9 +114,11 @@ pub async fn create_trucking(
         trade_id: None,
         trucking_id: Some(Uuid::new_v4()),
         fee: Some(fee),
-        created_at: now_ms(),
+        created_at: now,
         arrival_at: None,
         operation_complete_at: None,
+        estimated_arrival_at: Some(now + (transit_secs * 1000.0) as u64),
+        callback_url: callback_url.clone(),
     };
 
     let ship_id = ship.id;

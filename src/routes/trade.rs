@@ -13,8 +13,8 @@ use crate::models::{
     CreateTradeRequestBody, PlanetStatus, TradeRequest, TradeRequestMode, TradeRequestStatus,
 };
 use crate::state::AppState;
-use crate::validation::validate_input;
 use crate::trade_lifecycle::spawn_trade_request_loop;
+use crate::validation::validate_input;
 
 pub fn player_trade_router() -> Router<AppState> {
     Router::new()
@@ -49,22 +49,39 @@ pub async fn create_trade_request(
     Json(body): Json<CreateTradeRequestBody>,
 ) -> Result<(StatusCode, Json<TradeRequest>), AppError> {
     validate_input(&body)?;
-    // Validate mode-specific fields
+
     if body.rate_per_tick == 0 {
         return Err(TradeRequestError::ZeroRate.into());
     }
+
+    // Validate good exists and is not transient
+    if !state.config.economy.goods.is_empty() {
+        if !state.config.economy.goods.iter().any(|g| g.id == body.good_name) {
+            return Err(TradeRequestError::UnknownGood(body.good_name.clone()).into());
+        }
+    }
+    if state.config.economy.transient_goods.contains(&body.good_name) {
+        return Err(TradeRequestError::TransientGood(body.good_name.clone()).into());
+    }
+
+    // Validate mode-specific fields
     match body.mode {
-        TradeRequestMode::FixedRate => {
+        TradeRequestMode::Total => {
             if body.total_quantity.is_none() {
                 return Err(TradeRequestError::TotalQuantityRequired.into());
             }
-        }
-        TradeRequestMode::Threshold => {
-            if body.target_level.is_none() {
-                return Err(TradeRequestError::TargetLevelRequired.into());
+            if body.price_limit.is_some() {
+                return Err(TradeRequestError::TotalNoPriceLimit.into());
             }
         }
-        TradeRequestMode::Standing => {}
+        TradeRequestMode::PriceLimit => {
+            if body.price_limit.is_none() {
+                return Err(TradeRequestError::PriceLimitRequired.into());
+            }
+            if body.total_quantity.is_some() {
+                return Err(TradeRequestError::PriceLimitNoTotalQuantity.into());
+            }
+        }
     }
 
     // Validate planet is Connected and player owns the station
@@ -108,7 +125,7 @@ pub async fn create_trade_request(
         mode: body.mode,
         rate_per_tick: body.rate_per_tick,
         total_quantity: body.total_quantity,
-        target_level: body.target_level,
+        price_limit: body.price_limit,
         cumulative_generated: 0,
         status: TradeRequestStatus::Active,
         created_at: now_ms(),
@@ -125,6 +142,7 @@ pub async fn create_trade_request(
     spawn_trade_request_loop(
         state.trade_requests.clone(),
         state.galaxy.clone(),
+        state.players.clone(),
         state.config.clone(),
         request_id,
     );

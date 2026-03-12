@@ -355,6 +355,8 @@ async fn test_delete_player_cascading_ships() {
             created_at: 0,
             arrival_at: None,
             operation_complete_at: None,
+            estimated_arrival_at: None,
+            callback_url: String::new(),
         };
         ships.insert(ship.id, ship);
     }

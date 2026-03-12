@@ -13,9 +13,11 @@ pub enum TradeDirection {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum TradeRequestMode {
-    FixedRate,
-    Standing,
-    Threshold,
+    /// Import/Export rate_per_tick units per tick until total_quantity reached.
+    Total,
+    /// Import/Export rate_per_tick units per tick while settlement price meets condition.
+    /// Import: active while price > price_limit. Export: active while price < price_limit.
+    PriceLimit,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
@@ -37,7 +39,7 @@ pub struct TradeRequest {
     pub mode: TradeRequestMode,
     pub rate_per_tick: u64,
     pub total_quantity: Option<u64>,
-    pub target_level: Option<u64>,
+    pub price_limit: Option<f64>,
     pub cumulative_generated: u64,
     pub status: TradeRequestStatus,
     pub created_at: u64,
@@ -55,5 +57,5 @@ pub struct CreateTradeRequestBody {
     #[validate(range(min = 1, max = 1_000_000))]
     pub rate_per_tick: u64,
     pub total_quantity: Option<u64>,
-    pub target_level: Option<u64>,
+    pub price_limit: Option<f64>,
 }

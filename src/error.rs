@@ -134,14 +134,22 @@ pub enum TradeRequestError {
     PlanetNotConnected(String),
     #[error("Not the owner of the station on planet: {0}")]
     NotStationOwner(String),
-    #[error("total_quantity is required for FixedRate mode")]
+    #[error("total_quantity is required for Total mode")]
     TotalQuantityRequired,
-    #[error("target_level is required for Threshold mode")]
-    TargetLevelRequired,
+    #[error("price_limit is required for PriceLimit mode")]
+    PriceLimitRequired,
     #[error("rate_per_tick must be greater than zero")]
     ZeroRate,
     #[error("Trade request is not active: {0}")]
     RequestNotActive(String),
+    #[error("Total mode does not accept price_limit")]
+    TotalNoPriceLimit,
+    #[error("PriceLimit mode does not accept total_quantity")]
+    PriceLimitNoTotalQuantity,
+    #[error("Unknown good: {0}")]
+    UnknownGood(String),
+    #[error("Cannot trade transient good: {0}")]
+    TransientGood(String),
 }
 
 #[derive(Debug, Error)]
@@ -292,9 +300,13 @@ impl IntoResponse for AppError {
                     TradeRequestError::PlanetNotConnected(_) => StatusCode::BAD_REQUEST,
                     TradeRequestError::NotStationOwner(_) => StatusCode::FORBIDDEN,
                     TradeRequestError::TotalQuantityRequired => StatusCode::BAD_REQUEST,
-                    TradeRequestError::TargetLevelRequired => StatusCode::BAD_REQUEST,
+                    TradeRequestError::PriceLimitRequired => StatusCode::BAD_REQUEST,
                     TradeRequestError::ZeroRate => StatusCode::BAD_REQUEST,
                     TradeRequestError::RequestNotActive(_) => StatusCode::CONFLICT,
+                    TradeRequestError::TotalNoPriceLimit => StatusCode::BAD_REQUEST,
+                    TradeRequestError::PriceLimitNoTotalQuantity => StatusCode::BAD_REQUEST,
+                    TradeRequestError::UnknownGood(_) => StatusCode::BAD_REQUEST,
+                    TradeRequestError::TransientGood(_) => StatusCode::BAD_REQUEST,
                 };
                 (status, self.to_string())
             }

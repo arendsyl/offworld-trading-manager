@@ -7,8 +7,9 @@ use tracing::{info, warn};
 use uuid::Uuid;
 
 use crate::config::AppConfig;
+use crate::economy::EconomyState;
 use crate::models::{
-    Cabin, ConstructionProject, ConstructionWebhookPayload, Economy, MassDriver,
+    Cabin, ConstructionProject, ConstructionWebhookPayload, MassDriver,
     PlanetStatus, ProjectStatus, ProjectType, Settlement, SpaceElevator,
     SpaceElevatorConfig, Station, Warehouse,
 };
@@ -253,8 +254,7 @@ async fn apply_found_settlement(
 
                     let settlement = Settlement {
                         name: settlement_name,
-                        population: 100,
-                        economy: Economy::default(),
+                        economy: EconomyState::default(),
                         founding_goods: project.goods_consumed.clone(),
                     };
 

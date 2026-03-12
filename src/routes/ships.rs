@@ -6,7 +6,7 @@ use axum::{
     Json, Router,
 };
 use serde::Deserialize;
-use tracing::instrument;
+use tracing::{instrument, warn};
 use uuid::Uuid;
 
 use crate::auth::AuthenticatedPlayer;
@@ -150,7 +150,9 @@ pub async fn get_ship(
                 ShipStatus::Unloading => {
                     ship.status = ShipStatus::AwaitingUndockingAuth;
                 }
-                _ => {}
+                _ => {
+                    warn!(status = ?ship.status, "Unexpected status with completed operation timer");
+                }
             }
         }
     }
@@ -445,7 +447,9 @@ pub async fn undock_ship(
                     ShipStatus::Unloading => {
                         ship.status = ShipStatus::AwaitingUndockingAuth;
                     }
-                    _ => {}
+                    _ => {
+                        warn!(status = ?ship.status, "Unexpected status with completed operation timer");
+                    }
                 }
             }
         }
@@ -517,6 +521,8 @@ pub async fn undock_ship(
                     .get_mut(&ship_id)
                     .ok_or_else(|| ShipError::ShipNotFound(ship_id.to_string()))?;
                 ship.status = ShipStatus::InTransit;
+                ship.estimated_arrival_at = Some(now_ms() + (transit_secs * 1000.0) as u64);
+                ship.callback_url = dest_callback_url.clone();
             }
 
             spawn_ship_transit(

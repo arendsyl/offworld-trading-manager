@@ -33,6 +33,10 @@ pub struct Ship {
     pub created_at: u64,
     pub arrival_at: Option<u64>,
     pub operation_complete_at: Option<u64>,
+    #[serde(default)]
+    pub estimated_arrival_at: Option<u64>,
+    #[serde(default)]
+    pub callback_url: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Validate)]

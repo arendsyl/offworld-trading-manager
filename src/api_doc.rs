@@ -73,6 +73,12 @@ use crate::models::*;
         crate::routes::trade::list_trade_requests,
         crate::routes::trade::get_trade_request,
         crate::routes::trade::cancel_trade_request,
+        // Economy
+        crate::routes::economy::get_economy,
+        crate::routes::economy::get_economy_prices,
+        crate::routes::economy::get_economy_demographics,
+        crate::routes::economy::get_economy_flows,
+        crate::routes::economy::get_economy_stocks,
         // Leaderboard
         crate::routes::leaderboard::get_leaderboard,
         // Space Elevator
@@ -88,9 +94,11 @@ use crate::models::*;
             StarType, Coordinates, System, CreateSystemRequest, UpdateSystemRequest,
             // Planet
             PlanetStatus, ClimateType, GasGiantType, PlanetType, Planet,
-            CreatePlanetRequest, UpdatePlanetRequest,
+            CreatePlanetRequest, UpdatePlanetRequest, PlanetResource,
             // Settlement
-            Economy, Settlement, CreateSettlementRequest, UpdateSettlementRequest,
+            crate::economy::EconomyState, crate::economy::Demographics,
+            crate::economy::PlanetEconomyConfig,
+            Settlement, CreateSettlementRequest, UpdateSettlementRequest,
             // Station
             Station, CreateStationRequest, UpdateStationRequest,
             // Warehouse
@@ -114,8 +122,11 @@ use crate::models::*;
             // Trade Request
             TradeDirection, TradeRequestMode, TradeRequestStatus, TradeRequest,
             CreateTradeRequestBody,
+            // Economy
+            crate::routes::economy::DemographicsResponse,
+            crate::routes::economy::FlowsResponse,
             // Persistence
-            crate::routes::persistence::SnapshotResponse,
+            crate::routes::persistence::PersistenceResponse,
             // Error
             ErrorResponse,
         )
@@ -133,6 +144,7 @@ use crate::models::*;
         (name = "market", description = "Market and trading"),
         (name = "projects", description = "Construction projects"),
         (name = "trade", description = "Trade requests"),
+        (name = "economy", description = "Settlement economy simulation"),
         (name = "leaderboard", description = "Player rankings"),
         (name = "space-elevator", description = "Space elevator transfers"),
         (name = "persistence", description = "Game state persistence"),

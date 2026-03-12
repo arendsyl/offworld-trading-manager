@@ -7,7 +7,8 @@ use axum::{
 use tracing::{debug, info, warn, instrument};
 
 use crate::error::AppError;
-use crate::models::{CreateSettlementRequest, Economy, Planet, PlanetStatus, Settlement};
+use crate::economy::EconomyState;
+use crate::models::{CreateSettlementRequest, Planet, PlanetStatus, Settlement};
 use crate::state::AppState;
 use crate::validation::validate_input;
 
@@ -151,8 +152,7 @@ pub async fn create_or_update_settlement(
 
     let settlement = Settlement {
         name: payload.name,
-        population: payload.population.unwrap_or(0),
-        economy: Economy::default(),
+        economy: EconomyState::default(),
         founding_goods: Default::default(),
     };
 

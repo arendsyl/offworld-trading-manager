@@ -232,6 +232,32 @@ pub async fn place_order(
         let mut cargo = HashMap::new();
         cargo.insert(trade.good_name.clone(), trade.quantity);
 
+        // Calculate Sol → seller travel time and callback URL before building Ship
+        let (transit_secs, seller_callback_url) = {
+            let galaxy = state.galaxy.read().await;
+            let seller_info = galaxy.find_planet_info(&trade.seller_station);
+
+            let transit = match seller_info {
+                Some((_, ref coords, au, _)) => {
+                    calculate_sol_to_planet_time(coords, au, &state.config.trucking)
+                }
+                None => 0.0,
+            };
+
+            let seller_owner = seller_info
+                .map(|(_, _, _, owner)| owner)
+                .unwrap_or_default();
+
+            let players = state.players.read().await;
+            let callback = players
+                .get(&seller_owner)
+                .map(|p| p.callback_url.clone())
+                .unwrap_or_default();
+
+            (transit, callback)
+        };
+
+        let now = now_ms();
         let ship = Ship {
             id: Uuid::new_v4(),
             owner_id: trade.seller_id.clone(),
@@ -242,9 +268,11 @@ pub async fn place_order(
             trade_id: Some(trade.id),
             trucking_id: None,
             fee: None,
-            created_at: now_ms(),
+            created_at: now,
             arrival_at: None,
             operation_complete_at: None,
+            estimated_arrival_at: Some(now + (transit_secs * 1000.0) as u64),
+            callback_url: seller_callback_url.clone(),
         };
 
         let ship_id = ship.id;
@@ -254,31 +282,6 @@ pub async fn place_order(
         }
 
         if trade.seller_station != trade.buyer_station {
-            // Calculate Sol → seller travel time and spawn transit to origin
-            let (transit_secs, seller_callback_url) = {
-                let galaxy = state.galaxy.read().await;
-                let seller_info = galaxy.find_planet_info(&trade.seller_station);
-
-                let transit = match seller_info {
-                    Some((_, ref coords, au, _)) => {
-                        calculate_sol_to_planet_time(coords, au, &state.config.trucking)
-                    }
-                    None => 0.0,
-                };
-
-                let seller_owner = seller_info
-                    .map(|(_, _, _, owner)| owner)
-                    .unwrap_or_default();
-
-                let players = state.players.read().await;
-                let callback = players
-                    .get(&seller_owner)
-                    .map(|p| p.callback_url.clone())
-                    .unwrap_or_default();
-
-                (transit, callback)
-            };
-
             spawn_transit_to_origin(
                 state.ships.clone(),
                 ship_id,

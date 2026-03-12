@@ -43,7 +43,6 @@
           "status": "connected",
           "settlement": {
             "name": "New Geneva",
-            "population": 12000000000,
             "economy": {
               "credits": 0,
               "tax_rate": 0.0
@@ -94,7 +93,6 @@
           "status": "settled",
           "settlement": {
             "name": "Olympus City",
-            "population": 2500000,
             "economy": {
               "credits": 0,
               "tax_rate": 0.0
@@ -146,7 +144,6 @@
           "status": "connected",
           "settlement": {
             "name": "Frost Haven",
-            "population": 500000,
             "economy": {
               "credits": 0,
               "tax_rate": 0.0

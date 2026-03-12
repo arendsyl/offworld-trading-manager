@@ -387,7 +387,7 @@ pub async fn update_connection(
                             &from_owner,
                             &NotifyMessage::ConnectionClosed {
                                 connection_id: id,
-                                closed_by: "unknown".to_string(),
+                                closed_by: "admin".to_string(),
                             },
                         )
                         .await;
@@ -398,7 +398,7 @@ pub async fn update_connection(
                             &to_owner,
                             &NotifyMessage::ConnectionClosed {
                                 connection_id: id,
-                                closed_by: "unknown".to_string(),
+                                closed_by: "admin".to_string(),
                             },
                         )
                         .await;

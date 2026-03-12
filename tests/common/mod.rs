@@ -7,7 +7,7 @@ use offworld_trading_manager::config::AppConfig;
 use offworld_trading_manager::routes::{
     admin_connections_router, admin_planets_router, admin_players_router,
     admin_settlements_router, admin_stations_router, admin_systems_router,
-    player_market_router, player_planets_router, player_players_router,
+    player_economy_router, player_market_router, player_planets_router, player_players_router,
     player_settlements_router, player_ships_router, player_stations_router,
     player_systems_router, player_trade_router, player_trucking_router, space_elevator_router,
 };
@@ -56,7 +56,8 @@ pub fn build_router(state: AppState) -> Router {
             "/settlements",
             player_settlements_router()
                 .merge(player_stations_router())
-                .merge(space_elevator_router()),
+                .merge(space_elevator_router())
+                .merge(player_economy_router()),
         )
         .nest("/players", player_players_router())
         .nest("/ships", player_ships_router())

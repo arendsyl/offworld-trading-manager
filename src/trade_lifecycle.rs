@@ -3,18 +3,19 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use tokio::sync::RwLock;
-use tracing::{info, debug};
+use tracing::{debug, info};
 use uuid::Uuid;
 
 use crate::config::AppConfig;
 use crate::models::{
-    PlanetStatus, TradeDirection, TradeRequest, TradeRequestMode, TradeRequestStatus,
+    Player, PlanetStatus, TradeDirection, TradeRequest, TradeRequestMode, TradeRequestStatus,
 };
 use crate::state::GalaxyState;
 
 pub fn spawn_trade_request_loop(
     trade_requests: Arc<RwLock<HashMap<Uuid, TradeRequest>>>,
     galaxy: Arc<RwLock<GalaxyState>>,
+    players: Arc<RwLock<HashMap<String, Player>>>,
     config: Arc<AppConfig>,
     request_id: Uuid,
 ) {
@@ -36,7 +37,7 @@ pub fn spawn_trade_request_loop(
                 }
             };
 
-            // Check auto-cancel conditions by reading galaxy
+            // Check auto-cancel conditions
             let should_auto_cancel = {
                 let galaxy = galaxy.read().await;
                 check_auto_cancel(&galaxy, &snapshot)
@@ -54,34 +55,49 @@ pub fn spawn_trade_request_loop(
                 return;
             }
 
+            // For PriceLimit mode, check price condition before generating
+            if snapshot.mode == TradeRequestMode::PriceLimit {
+                let price_condition_met = {
+                    let galaxy = galaxy.read().await;
+                    check_price_condition(&galaxy, &snapshot)
+                };
+                if !price_condition_met {
+                    // Price condition not met — skip this tick
+                    debug!(request_id = %request_id, "PriceLimit condition not met, skipping tick");
+                    continue;
+                }
+            }
+
             // Compute units to generate this tick
             let units = match snapshot.mode {
-                TradeRequestMode::FixedRate => {
-                    let remaining = snapshot.total_quantity.unwrap_or(0)
+                TradeRequestMode::Total => {
+                    let remaining = snapshot
+                        .total_quantity
+                        .unwrap_or(0)
                         .saturating_sub(snapshot.cumulative_generated);
                     snapshot.rate_per_tick.min(remaining)
                 }
-                TradeRequestMode::Standing => snapshot.rate_per_tick,
-                TradeRequestMode::Threshold => snapshot.rate_per_tick,
+                TradeRequestMode::PriceLimit => snapshot.rate_per_tick,
             };
 
             if units == 0 {
-                // FixedRate with nothing remaining — mark completed
+                // Total mode with nothing remaining — mark completed
                 let mut requests = trade_requests.write().await;
                 if let Some(req) = requests.get_mut(&request_id) {
                     if req.status == TradeRequestStatus::Active {
                         req.status = TradeRequestStatus::Completed;
                         req.completed_at = Some(now_ms());
-                        info!(request_id = %request_id, "Trade request completed (FixedRate fulfilled)");
+                        info!(request_id = %request_id, "Trade request completed (Total fulfilled)");
                     }
                 }
                 return;
             }
 
-            // Write galaxy: update economy supply/demand
+            // Write galaxy + players: update economy flow accumulators + warehouse + credits
             {
                 let mut galaxy = galaxy.write().await;
-                apply_trade_tick(&mut galaxy, &snapshot, units);
+                let mut players = players.write().await;
+                apply_trade_tick(&mut galaxy, &mut players, &snapshot, units);
             }
 
             // Write trade_requests: update cumulative + check completion
@@ -94,16 +110,10 @@ pub fn spawn_trade_request_loop(
                     req.cumulative_generated += units;
 
                     let completed = match req.mode {
-                        TradeRequestMode::FixedRate => {
-                            req.cumulative_generated
-                                >= req.total_quantity.unwrap_or(0)
+                        TradeRequestMode::Total => {
+                            req.cumulative_generated >= req.total_quantity.unwrap_or(0)
                         }
-                        TradeRequestMode::Standing => false,
-                        TradeRequestMode::Threshold => {
-                            // Check in next iteration via galaxy read
-                            // For now, check if we need to read galaxy to determine
-                            false
-                        }
+                        TradeRequestMode::PriceLimit => false, // runs indefinitely
                     };
 
                     if completed {
@@ -114,35 +124,11 @@ pub fn spawn_trade_request_loop(
                     }
                 }
             }
-
-            // For Threshold mode, check if target reached after applying tick
-            if snapshot.mode == TradeRequestMode::Threshold {
-                let target_reached = {
-                    let galaxy = galaxy.read().await;
-                    check_threshold_reached(&galaxy, &snapshot)
-                };
-                if target_reached {
-                    let mut requests = trade_requests.write().await;
-                    if let Some(req) = requests.get_mut(&request_id) {
-                        if req.status == TradeRequestStatus::Active {
-                            req.status = TradeRequestStatus::Completed;
-                            req.completed_at = Some(now_ms());
-                            info!(request_id = %request_id, "Trade request completed (threshold reached)");
-                        }
-                    }
-                    return;
-                }
-            }
         }
     });
 }
 
 fn check_auto_cancel(galaxy: &GalaxyState, request: &TradeRequest) -> bool {
-    // Only Standing and Threshold auto-cancel
-    if request.mode == TradeRequestMode::FixedRate {
-        return false;
-    }
-
     for system in galaxy.systems.values() {
         for planet in &system.planets {
             if planet.id == request.planet_id {
@@ -150,22 +136,17 @@ fn check_auto_cancel(galaxy: &GalaxyState, request: &TradeRequest) -> bool {
                     PlanetStatus::Connected {
                         space_elevator, ..
                     } => {
-                        match request.direction {
-                            TradeDirection::Export => {
-                                // Auto-cancel when warehouse has none of the good
-                                let qty = space_elevator
-                                    .warehouse
-                                    .inventory
-                                    .get(&request.good_name)
-                                    .copied()
-                                    .unwrap_or(0);
-                                return qty == 0;
-                            }
-                            TradeDirection::Import => {
-                                // Surface has unlimited storage — never auto-cancel for imports
-                                return false;
-                            }
+                        // Import auto-cancels when warehouse is empty of the good
+                        if request.direction == TradeDirection::Import {
+                            let qty = space_elevator
+                                .warehouse
+                                .inventory
+                                .get(&request.good_name)
+                                .copied()
+                                .unwrap_or(0);
+                            return qty == 0;
                         }
+                        return false;
                     }
                     _ => {
                         // Planet no longer connected — auto-cancel
@@ -179,9 +160,10 @@ fn check_auto_cancel(galaxy: &GalaxyState, request: &TradeRequest) -> bool {
     true
 }
 
-fn check_threshold_reached(galaxy: &GalaxyState, request: &TradeRequest) -> bool {
-    let target = match request.target_level {
-        Some(t) => t,
+/// Check if price condition is met for PriceLimit mode.
+fn check_price_condition(galaxy: &GalaxyState, request: &TradeRequest) -> bool {
+    let price_limit = match request.price_limit {
+        Some(p) => p,
         None => return false,
     };
 
@@ -189,21 +171,18 @@ fn check_threshold_reached(galaxy: &GalaxyState, request: &TradeRequest) -> bool
         for planet in &system.planets {
             if planet.id == request.planet_id {
                 if let PlanetStatus::Connected { settlement, .. } = &planet.status {
-                    let current = match request.direction {
-                        TradeDirection::Export => settlement
-                            .economy
-                            .supply
-                            .get(&request.good_name)
-                            .copied()
-                            .unwrap_or(0),
-                        TradeDirection::Import => settlement
-                            .economy
-                            .demand
-                            .get(&request.good_name)
-                            .copied()
-                            .unwrap_or(0),
+                    let current_price = settlement
+                        .economy
+                        .prices
+                        .get(&request.good_name)
+                        .copied()
+                        .unwrap_or(0.0);
+                    return match request.direction {
+                        // Import: active while settlement price > price_limit (good is expensive, player supplies)
+                        TradeDirection::Import => current_price > price_limit,
+                        // Export: active while settlement price < price_limit (good is cheap, player buys)
+                        TradeDirection::Export => current_price < price_limit,
                     };
-                    return current >= target;
                 }
             }
         }
@@ -211,28 +190,109 @@ fn check_threshold_reached(galaxy: &GalaxyState, request: &TradeRequest) -> bool
     false
 }
 
-fn apply_trade_tick(galaxy: &mut GalaxyState, request: &TradeRequest, units: u64) {
+fn apply_trade_tick(
+    galaxy: &mut GalaxyState,
+    players: &mut HashMap<String, Player>,
+    request: &TradeRequest,
+    units: u64,
+) {
     for system in galaxy.systems.values_mut() {
         for planet in &mut system.planets {
             if planet.id == request.planet_id {
                 if let PlanetStatus::Connected {
-                    ref mut settlement, ..
+                    ref mut settlement,
+                    ref mut space_elevator,
+                    ..
                 } = planet.status
                 {
                     match request.direction {
                         TradeDirection::Export => {
+                            // Always accumulate full request for economy price signal
                             *settlement
                                 .economy
-                                .supply
+                                .exports_this_tick
                                 .entry(request.good_name.clone())
-                                .or_insert(0) += units;
+                                .or_insert(0.0) += units as f64;
+
+                            // Deliver only what the economy can supply (budget from last tick)
+                            let can_deliver = settlement
+                                .economy
+                                .last_exports_fulfilled
+                                .get_mut(&request.good_name)
+                                .map(|budget| {
+                                    let actual = (units as f64).min(*budget);
+                                    *budget -= actual;
+                                    actual as u64
+                                })
+                                .unwrap_or(0);
+
+                            if can_deliver > 0 {
+                                // Player pays economy price for exported goods
+                                let price = settlement
+                                    .economy
+                                    .prices
+                                    .get(&request.good_name)
+                                    .copied()
+                                    .unwrap_or(1.0);
+                                let cost = (can_deliver as f64 * price).round() as i64;
+
+                                if let Some(player) = players.get_mut(&request.owner_id) {
+                                    let affordable = if cost > 0 {
+                                        let max_units =
+                                            (player.credits as f64 / price).floor() as u64;
+                                        can_deliver.min(max_units)
+                                    } else {
+                                        can_deliver
+                                    };
+
+                                    if affordable > 0 {
+                                        let actual_cost =
+                                            (affordable as f64 * price).round() as i64;
+                                        player.credits -= actual_cost;
+                                        *space_elevator
+                                            .warehouse
+                                            .inventory
+                                            .entry(request.good_name.clone())
+                                            .or_insert(0) += affordable;
+                                    }
+                                }
+                            }
                         }
                         TradeDirection::Import => {
-                            *settlement
-                                .economy
-                                .demand
-                                .entry(request.good_name.clone())
-                                .or_insert(0) += units;
+                            // Player warehouse -> settlement imports
+                            let available = space_elevator
+                                .warehouse
+                                .inventory
+                                .get(&request.good_name)
+                                .copied()
+                                .unwrap_or(0);
+                            let transferred = units.min(available);
+                            if transferred > 0 {
+                                if let Some(qty) = space_elevator
+                                    .warehouse
+                                    .inventory
+                                    .get_mut(&request.good_name)
+                                {
+                                    *qty = qty.saturating_sub(transferred);
+                                }
+                                *settlement
+                                    .economy
+                                    .imports_this_tick
+                                    .entry(request.good_name.clone())
+                                    .or_insert(0.0) += transferred as f64;
+
+                                // Player receives economy price for imported goods
+                                let price = settlement
+                                    .economy
+                                    .prices
+                                    .get(&request.good_name)
+                                    .copied()
+                                    .unwrap_or(1.0);
+                                let revenue = (transferred as f64 * price).round() as i64;
+                                if let Some(player) = players.get_mut(&request.owner_id) {
+                                    player.credits += revenue;
+                                }
+                            }
                         }
                     }
                 }

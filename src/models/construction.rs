@@ -38,6 +38,10 @@ pub struct ConstructionProject {
     pub completion_at: u64,
     pub station_name: Option<String>,
     pub settlement_name: Option<String>,
+    #[serde(default)]
+    pub transit_ends_at: Option<u64>,
+    #[serde(default)]
+    pub callback_url: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]

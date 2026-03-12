@@ -11,6 +11,7 @@ pub mod trucking;
 pub mod construction;
 pub mod leaderboard;
 pub mod trade;
+pub mod economy;
 pub mod persistence;
 
 pub use systems::{admin_systems_router, player_systems_router};
@@ -26,4 +27,5 @@ pub use trucking::player_trucking_router;
 pub use construction::player_projects_router;
 pub use leaderboard::player_leaderboard_router;
 pub use trade::player_trade_router;
+pub use economy::player_economy_router;
 pub use persistence::admin_persistence_router;

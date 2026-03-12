@@ -1,0 +1,2940 @@
+[
+  {
+    "id": "duranium_mine",
+    "name": "Duranium Mine",
+    "tier": 0,
+    "category": "extraction",
+    "inputs": [
+      {
+        "good": "fuel_cells",
+        "quantity": 3
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 3
+      }
+    ],
+    "outputs": [
+      {
+        "good": "duranium_ore",
+        "quantity": 16
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 2
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "neutronium_mine",
+    "name": "Neutronium Mine",
+    "tier": 0,
+    "category": "extraction",
+    "inputs": [
+      {
+        "good": "fuel_cells",
+        "quantity": 3
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 3
+      }
+    ],
+    "outputs": [
+      {
+        "good": "neutronium_ore",
+        "quantity": 16
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 2
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "corbomite_mine",
+    "name": "Corbomite Mine",
+    "tier": 0,
+    "category": "extraction",
+    "inputs": [
+      {
+        "good": "fuel_cells",
+        "quantity": 3
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 3
+      }
+    ],
+    "outputs": [
+      {
+        "good": "corbomite_ore",
+        "quantity": 16
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 2
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "tritanium_mine",
+    "name": "Tritanium Mine",
+    "tier": 0,
+    "category": "extraction",
+    "inputs": [
+      {
+        "good": "fuel_cells",
+        "quantity": 3
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 3
+      }
+    ],
+    "outputs": [
+      {
+        "good": "tritanium_ore",
+        "quantity": 16
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 2
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "boronide_mine",
+    "name": "Boronide Mine",
+    "tier": 0,
+    "category": "extraction",
+    "inputs": [
+      {
+        "good": "fuel_cells",
+        "quantity": 3
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 3
+      }
+    ],
+    "outputs": [
+      {
+        "good": "boronide_ore",
+        "quantity": 16
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 2
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "mercassium_mine",
+    "name": "Mercassium Mine",
+    "tier": 0,
+    "category": "extraction",
+    "inputs": [
+      {
+        "good": "fuel_cells",
+        "quantity": 3
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 3
+      }
+    ],
+    "outputs": [
+      {
+        "good": "mercassium_ore",
+        "quantity": 16
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 2
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "thermal_composites",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "sorium_extractor",
+    "name": "Sorium Extractor",
+    "tier": 0,
+    "category": "extraction",
+    "inputs": [
+      {
+        "good": "fuel_cells",
+        "quantity": 3
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 3
+      }
+    ],
+    "outputs": [
+      {
+        "good": "sorium",
+        "quantity": 16
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 2
+      },
+      {
+        "good": "fuel_cells",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "advanced_coolant",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "corundium_mine",
+    "name": "Corundium Mine",
+    "tier": 0,
+    "category": "extraction",
+    "inputs": [
+      {
+        "good": "fuel_cells",
+        "quantity": 3
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 3
+      }
+    ],
+    "outputs": [
+      {
+        "good": "corundium_ore",
+        "quantity": 16
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 2
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "gallicite_mine",
+    "name": "Gallicite Mine",
+    "tier": 0,
+    "category": "extraction",
+    "inputs": [
+      {
+        "good": "fuel_cells",
+        "quantity": 3
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 3
+      }
+    ],
+    "outputs": [
+      {
+        "good": "gallicite_ore",
+        "quantity": 16
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 2
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "vendarite_mine",
+    "name": "Vendarite Mine",
+    "tier": 0,
+    "category": "extraction",
+    "inputs": [
+      {
+        "good": "fuel_cells",
+        "quantity": 3
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 3
+      }
+    ],
+    "outputs": [
+      {
+        "good": "vendarite_ore",
+        "quantity": 16
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 2
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "thermal_composites",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "uridium_mine",
+    "name": "Uridium Mine",
+    "tier": 0,
+    "category": "extraction",
+    "inputs": [
+      {
+        "good": "fuel_cells",
+        "quantity": 3
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 3
+      }
+    ],
+    "outputs": [
+      {
+        "good": "uridium_ore",
+        "quantity": 16
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 2
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "advanced_coolant",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "hydroponics_farm",
+    "name": "Hydroponics Farm",
+    "tier": 0,
+    "category": "extraction",
+    "inputs": [
+      {
+        "good": "fuel_cells",
+        "quantity": 3
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 3
+      }
+    ],
+    "outputs": [
+      {
+        "good": "food_biomass",
+        "quantity": 16
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "glass_panels",
+        "quantity": 2
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "synthetic_polymers",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "aquaculture_station",
+    "name": "Aquaculture Station",
+    "tier": 0,
+    "category": "extraction",
+    "inputs": [
+      {
+        "good": "fuel_cells",
+        "quantity": 3
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 3
+      }
+    ],
+    "outputs": [
+      {
+        "good": "aquatic_biomass",
+        "quantity": 16
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "structural_frames",
+        "quantity": 2
+      },
+      {
+        "good": "glass_panels",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "synthetic_polymers",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "fungal_cultivation_pit",
+    "name": "Fungal Cultivation Pit",
+    "tier": 0,
+    "category": "extraction",
+    "inputs": [
+      {
+        "good": "fuel_cells",
+        "quantity": 3
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 3
+      }
+    ],
+    "outputs": [
+      {
+        "good": "fungal_biomass",
+        "quantity": 16
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "thermal_composites",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "synthetic_polymers",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "rare_flora_harvester",
+    "name": "Rare Flora Harvester",
+    "tier": 0,
+    "category": "extraction",
+    "inputs": [
+      {
+        "good": "fuel_cells",
+        "quantity": 3
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 3
+      }
+    ],
+    "outputs": [
+      {
+        "good": "rare_botanicals",
+        "quantity": 16
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "glass_panels",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "synthetic_polymers",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "ice_harvester",
+    "name": "Ice Harvester",
+    "tier": 0,
+    "category": "extraction",
+    "inputs": [
+      {
+        "good": "fuel_cells",
+        "quantity": 3
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 3
+      }
+    ],
+    "outputs": [
+      {
+        "good": "raw_ice",
+        "quantity": 16
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "atmospheric_processor",
+    "name": "Atmospheric Processor",
+    "tier": 0,
+    "category": "extraction",
+    "inputs": [
+      {
+        "good": "fuel_cells",
+        "quantity": 3
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 3
+      }
+    ],
+    "outputs": [
+      {
+        "good": "noble_gases",
+        "quantity": 16
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 2
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "advanced_coolant",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "water_extractor",
+    "name": "Water Extractor",
+    "tier": 0,
+    "category": "extraction",
+    "inputs": [
+      {
+        "good": "fuel_cells",
+        "quantity": 3
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 3
+      }
+    ],
+    "outputs": [
+      {
+        "good": "fresh_water",
+        "quantity": 32
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "glass_panels",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "sand_quarry",
+    "name": "Sand Quarry",
+    "tier": 0,
+    "category": "extraction",
+    "inputs": [
+      {
+        "good": "fuel_cells",
+        "quantity": 3
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 3
+      }
+    ],
+    "outputs": [
+      {
+        "good": "silica_sand",
+        "quantity": 16
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "duranium_smelter",
+    "name": "Duranium Smelter",
+    "tier": 1,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "duranium_ore",
+        "quantity": 5
+      }
+    ],
+    "outputs": [
+      {
+        "good": "duranium",
+        "quantity": 9
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "neutronium_smelter",
+    "name": "Neutronium Smelter",
+    "tier": 1,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "neutronium_ore",
+        "quantity": 4
+      }
+    ],
+    "outputs": [
+      {
+        "good": "neutronium",
+        "quantity": 8
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "corbomite_refinery",
+    "name": "Corbomite Refinery",
+    "tier": 1,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "corbomite_ore",
+        "quantity": 4
+      }
+    ],
+    "outputs": [
+      {
+        "good": "corbomite",
+        "quantity": 8
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "tritanium_smelter",
+    "name": "Tritanium Smelter",
+    "tier": 1,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "tritanium_ore",
+        "quantity": 5
+      }
+    ],
+    "outputs": [
+      {
+        "good": "tritanium",
+        "quantity": 9
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "boronide_refinery",
+    "name": "Boronide Refinery",
+    "tier": 1,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "boronide_ore",
+        "quantity": 3
+      }
+    ],
+    "outputs": [
+      {
+        "good": "boronide",
+        "quantity": 8
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "mercassium_smelter",
+    "name": "Mercassium Smelter",
+    "tier": 1,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "mercassium_ore",
+        "quantity": 3
+      }
+    ],
+    "outputs": [
+      {
+        "good": "mercassium",
+        "quantity": 8
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "sorium_refinery",
+    "name": "Sorium Refinery",
+    "tier": 1,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "sorium",
+        "quantity": 4
+      }
+    ],
+    "outputs": [
+      {
+        "good": "refined_sorium",
+        "quantity": 8
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "corundium_processor",
+    "name": "Corundium Processor",
+    "tier": 1,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "corundium_ore",
+        "quantity": 3
+      }
+    ],
+    "outputs": [
+      {
+        "good": "corundium",
+        "quantity": 8
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "gallicite_smelter",
+    "name": "Gallicite Smelter",
+    "tier": 1,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "gallicite_ore",
+        "quantity": 2
+      }
+    ],
+    "outputs": [
+      {
+        "good": "gallicite",
+        "quantity": 8
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "vendarite_refinery",
+    "name": "Vendarite Refinery",
+    "tier": 1,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "vendarite_ore",
+        "quantity": 3
+      }
+    ],
+    "outputs": [
+      {
+        "good": "vendarite",
+        "quantity": 8
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "uridium_cryoforge",
+    "name": "Uridium Cryoforge",
+    "tier": 1,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "uridium_ore",
+        "quantity": 2
+      }
+    ],
+    "outputs": [
+      {
+        "good": "uridium",
+        "quantity": 8
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "food_processing_plant",
+    "name": "Food Processing Plant",
+    "tier": 1,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "food_biomass",
+        "quantity": 6
+      },
+      {
+        "good": "fresh_water",
+        "quantity": 2
+      }
+    ],
+    "outputs": [
+      {
+        "good": "ration_packs",
+        "quantity": 22
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "aquatic_processor",
+    "name": "Aquatic Processor",
+    "tier": 1,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "aquatic_biomass",
+        "quantity": 4
+      },
+      {
+        "good": "fresh_water",
+        "quantity": 2
+      }
+    ],
+    "outputs": [
+      {
+        "good": "protein_paste",
+        "quantity": 10
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "biochem_lab",
+    "name": "Biochem Lab",
+    "tier": 1,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "rare_botanicals",
+        "quantity": 2
+      },
+      {
+        "good": "fresh_water",
+        "quantity": 1
+      }
+    ],
+    "outputs": [
+      {
+        "good": "biocompounds",
+        "quantity": 8
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "cryo_distillery",
+    "name": "Cryo-Distillery",
+    "tier": 1,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "raw_ice",
+        "quantity": 4
+      },
+      {
+        "good": "noble_gases",
+        "quantity": 2
+      }
+    ],
+    "outputs": [
+      {
+        "good": "coolant",
+        "quantity": 10
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "fungal_fermenter",
+    "name": "Fungal Fermenter",
+    "tier": 1,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "fungal_biomass",
+        "quantity": 3
+      },
+      {
+        "good": "fresh_water",
+        "quantity": 1
+      }
+    ],
+    "outputs": [
+      {
+        "good": "fungal_extract",
+        "quantity": 9
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "polymer_synthesizer",
+    "name": "Polymer Synthesizer",
+    "tier": 1,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "refined_sorium",
+        "quantity": 2
+      },
+      {
+        "good": "corbomite",
+        "quantity": 1
+      }
+    ],
+    "outputs": [
+      {
+        "good": "synthetic_polymers",
+        "quantity": 10
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "ice_cracker",
+    "name": "Ice Cracker",
+    "tier": 1,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "raw_ice",
+        "quantity": 6
+      }
+    ],
+    "outputs": [
+      {
+        "good": "fresh_water",
+        "quantity": 18
+      },
+      {
+        "good": "noble_gases",
+        "quantity": 5
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "glassworks",
+    "name": "Glassworks",
+    "tier": 1,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "silica_sand",
+        "quantity": 3
+      },
+      {
+        "good": "boronide",
+        "quantity": 1
+      }
+    ],
+    "outputs": [
+      {
+        "good": "glass_panels",
+        "quantity": 9
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "duranium_forge",
+    "name": "Duranium Forge",
+    "tier": 2,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "duranium",
+        "quantity": 4
+      },
+      {
+        "good": "neutronium",
+        "quantity": 2
+      }
+    ],
+    "outputs": [
+      {
+        "good": "duranium_plate",
+        "quantity": 6
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "superconductor_wafers",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "neutronium_press",
+    "name": "Neutronium Press",
+    "tier": 2,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "neutronium",
+        "quantity": 3
+      },
+      {
+        "good": "corbomite",
+        "quantity": 1
+      }
+    ],
+    "outputs": [
+      {
+        "good": "neutronium_armor",
+        "quantity": 5
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "superconductor_wafers",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "magma_alloy_foundry",
+    "name": "Magma Alloy Foundry",
+    "tier": 2,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "mercassium",
+        "quantity": 3
+      },
+      {
+        "good": "duranium",
+        "quantity": 2
+      }
+    ],
+    "outputs": [
+      {
+        "good": "magma_forged_alloy",
+        "quantity": 6
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "superconductor_wafers",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "tritanium_weaver",
+    "name": "Tritanium Weaver",
+    "tier": 2,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "tritanium",
+        "quantity": 3
+      },
+      {
+        "good": "boronide",
+        "quantity": 1
+      }
+    ],
+    "outputs": [
+      {
+        "good": "tritanium_mesh",
+        "quantity": 5
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "superconductor_wafers",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "corundium_lens_workshop",
+    "name": "Corundium Lens Workshop",
+    "tier": 2,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "corundium",
+        "quantity": 2
+      },
+      {
+        "good": "gallicite",
+        "quantity": 1
+      }
+    ],
+    "outputs": [
+      {
+        "good": "optical_arrays",
+        "quantity": 5
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "superconductor_wafers",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "gallicite_circuit_fab",
+    "name": "Gallicite Circuit Fab",
+    "tier": 2,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "gallicite",
+        "quantity": 2
+      },
+      {
+        "good": "uridium",
+        "quantity": 1
+      }
+    ],
+    "outputs": [
+      {
+        "good": "superconductor_wafers",
+        "quantity": 5
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "superconductor_wafers",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "vendarite_composite_mill",
+    "name": "Vendarite Composite Mill",
+    "tier": 2,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "vendarite",
+        "quantity": 3
+      },
+      {
+        "good": "synthetic_polymers",
+        "quantity": 2
+      }
+    ],
+    "outputs": [
+      {
+        "good": "thermal_composites",
+        "quantity": 6
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "superconductor_wafers",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "cryo_alloy_forge",
+    "name": "Cryo-Alloy Forge",
+    "tier": 2,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "uridium",
+        "quantity": 2
+      },
+      {
+        "good": "neutronium",
+        "quantity": 2
+      },
+      {
+        "good": "coolant",
+        "quantity": 1
+      }
+    ],
+    "outputs": [
+      {
+        "good": "cryo_alloy",
+        "quantity": 6
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "superconductor_wafers",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "sorium_fuel_cell_plant",
+    "name": "Sorium Fuel Cell Plant",
+    "tier": 2,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "refined_sorium",
+        "quantity": 3
+      },
+      {
+        "good": "boronide",
+        "quantity": 1
+      }
+    ],
+    "outputs": [
+      {
+        "good": "fuel_cells",
+        "quantity": 5
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "superconductor_wafers",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "wiring_loom_factory",
+    "name": "Wiring Loom Factory",
+    "tier": 2,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "gallicite",
+        "quantity": 2
+      },
+      {
+        "good": "tritanium",
+        "quantity": 1
+      },
+      {
+        "good": "synthetic_polymers",
+        "quantity": 1
+      }
+    ],
+    "outputs": [
+      {
+        "good": "wiring_looms",
+        "quantity": 5
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "superconductor_wafers",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "structural_frame_works",
+    "name": "Structural Frame Works",
+    "tier": 2,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "duranium_plate",
+        "quantity": 3
+      },
+      {
+        "good": "magma_forged_alloy",
+        "quantity": 2
+      }
+    ],
+    "outputs": [
+      {
+        "good": "structural_frames",
+        "quantity": 8
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "superconductor_wafers",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "coolant_recirculator",
+    "name": "Coolant Recirculator",
+    "tier": 2,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "coolant",
+        "quantity": 2
+      },
+      {
+        "good": "cryo_alloy",
+        "quantity": 1
+      }
+    ],
+    "outputs": [
+      {
+        "good": "advanced_coolant",
+        "quantity": 5
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "superconductor_wafers",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "pharmaceutical_lab",
+    "name": "Pharmaceutical Lab",
+    "tier": 2,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "biocompounds",
+        "quantity": 2
+      },
+      {
+        "good": "fungal_extract",
+        "quantity": 1
+      }
+    ],
+    "outputs": [
+      {
+        "good": "medicine",
+        "quantity": 10
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "superconductor_wafers",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "nutrient_enrichment_facility",
+    "name": "Nutrient Enrichment Facility",
+    "tier": 2,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "ration_packs",
+        "quantity": 2
+      },
+      {
+        "good": "protein_paste",
+        "quantity": 1
+      },
+      {
+        "good": "biocompounds",
+        "quantity": 1
+      }
+    ],
+    "outputs": [
+      {
+        "good": "enriched_meals",
+        "quantity": 10
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "superconductor_wafers",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "synthetic_fabric_mill",
+    "name": "Synthetic Fabric Mill",
+    "tier": 2,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "synthetic_polymers",
+        "quantity": 2
+      },
+      {
+        "good": "tritanium_mesh",
+        "quantity": 1
+      }
+    ],
+    "outputs": [
+      {
+        "good": "synthetic_fabric",
+        "quantity": 10
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "superconductor_wafers",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "clothing_factory",
+    "name": "Clothing Factory",
+    "tier": 2,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "synthetic_fabric",
+        "quantity": 3
+      },
+      {
+        "good": "vendarite",
+        "quantity": 1
+      }
+    ],
+    "outputs": [
+      {
+        "good": "clothing",
+        "quantity": 14
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "superconductor_wafers",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "furniture_workshop",
+    "name": "Furniture Workshop",
+    "tier": 2,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "duranium_plate",
+        "quantity": 2
+      },
+      {
+        "good": "synthetic_fabric",
+        "quantity": 1
+      },
+      {
+        "good": "glass_panels",
+        "quantity": 1
+      }
+    ],
+    "outputs": [
+      {
+        "good": "furniture",
+        "quantity": 14
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "superconductor_wafers",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "electronics_assembly",
+    "name": "Electronics Assembly",
+    "tier": 2,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "superconductor_wafers",
+        "quantity": 2
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "glass_panels",
+        "quantity": 1
+      }
+    ],
+    "outputs": [
+      {
+        "good": "household_electronics",
+        "quantity": 14
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "superconductor_wafers",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "media_studio",
+    "name": "Media Studio",
+    "tier": 2,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "household_electronics",
+        "quantity": 1
+      },
+      {
+        "good": "synthetic_polymers",
+        "quantity": 1
+      },
+      {
+        "good": "optical_arrays",
+        "quantity": 1
+      }
+    ],
+    "outputs": [
+      {
+        "good": "entertainment_media",
+        "quantity": 12
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "superconductor_wafers",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "luxury_goods_atelier",
+    "name": "Luxury Goods Atelier",
+    "tier": 2,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "biocompounds",
+        "quantity": 1
+      },
+      {
+        "good": "corundium",
+        "quantity": 1
+      },
+      {
+        "good": "vendarite",
+        "quantity": 1
+      }
+    ],
+    "outputs": [
+      {
+        "good": "luxury_goods",
+        "quantity": 5
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "superconductor_wafers",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "shield_generator_fab",
+    "name": "Shield Generator Fab",
+    "tier": 3,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "cryo_alloy",
+        "quantity": 2
+      },
+      {
+        "good": "superconductor_wafers",
+        "quantity": 2
+      },
+      {
+        "good": "advanced_coolant",
+        "quantity": 1
+      }
+    ],
+    "outputs": [
+      {
+        "good": "shield_generator",
+        "quantity": 3
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "superconductor_wafers",
+        "quantity": 1
+      },
+      {
+        "good": "optical_arrays",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "power_core_forge",
+    "name": "Power Core Forge",
+    "tier": 3,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "fuel_cells",
+        "quantity": 2
+      },
+      {
+        "good": "cryo_alloy",
+        "quantity": 2
+      },
+      {
+        "good": "superconductor_wafers",
+        "quantity": 1
+      }
+    ],
+    "outputs": [
+      {
+        "good": "power_core",
+        "quantity": 3
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "superconductor_wafers",
+        "quantity": 1
+      },
+      {
+        "good": "optical_arrays",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "gourmet_synthesizer",
+    "name": "Gourmet Synthesizer",
+    "tier": 3,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "enriched_meals",
+        "quantity": 2
+      },
+      {
+        "good": "rare_botanicals",
+        "quantity": 1
+      },
+      {
+        "good": "luxury_goods",
+        "quantity": 1
+      }
+    ],
+    "outputs": [
+      {
+        "good": "gourmet_rations",
+        "quantity": 6
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "superconductor_wafers",
+        "quantity": 1
+      },
+      {
+        "good": "optical_arrays",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "haute_couture_studio",
+    "name": "Haute Couture Studio",
+    "tier": 3,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "synthetic_fabric",
+        "quantity": 2
+      },
+      {
+        "good": "luxury_goods",
+        "quantity": 1
+      },
+      {
+        "good": "corundium",
+        "quantity": 1
+      }
+    ],
+    "outputs": [
+      {
+        "good": "designer_apparel",
+        "quantity": 6
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "superconductor_wafers",
+        "quantity": 1
+      },
+      {
+        "good": "optical_arrays",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "elite_medbay_fab",
+    "name": "Elite Med-Bay Fab",
+    "tier": 3,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "medicine",
+        "quantity": 2
+      },
+      {
+        "good": "cryo_alloy",
+        "quantity": 1
+      },
+      {
+        "good": "biocompounds",
+        "quantity": 1
+      }
+    ],
+    "outputs": [
+      {
+        "good": "advanced_med_kit",
+        "quantity": 6
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "superconductor_wafers",
+        "quantity": 1
+      },
+      {
+        "good": "optical_arrays",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "neural_interface_lab",
+    "name": "Neural Interface Lab",
+    "tier": 3,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "superconductor_wafers",
+        "quantity": 1
+      },
+      {
+        "good": "optical_arrays",
+        "quantity": 1
+      },
+      {
+        "good": "biocompounds",
+        "quantity": 1
+      }
+    ],
+    "outputs": [
+      {
+        "good": "neural_implant",
+        "quantity": 4
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "superconductor_wafers",
+        "quantity": 1
+      },
+      {
+        "good": "optical_arrays",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "distillery",
+    "name": "Distillery",
+    "tier": 3,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "fungal_extract",
+        "quantity": 2
+      },
+      {
+        "good": "rare_botanicals",
+        "quantity": 1
+      },
+      {
+        "good": "fresh_water",
+        "quantity": 1
+      }
+    ],
+    "outputs": [
+      {
+        "good": "fine_spirits",
+        "quantity": 4
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "superconductor_wafers",
+        "quantity": 1
+      },
+      {
+        "good": "optical_arrays",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "jewelers_atelier",
+    "name": "Jeweler's Atelier",
+    "tier": 3,
+    "category": "manufacturing",
+    "inputs": [
+      {
+        "good": "corundium",
+        "quantity": 1
+      },
+      {
+        "good": "gallicite",
+        "quantity": 1
+      },
+      {
+        "good": "luxury_goods",
+        "quantity": 1
+      }
+    ],
+    "outputs": [
+      {
+        "good": "artisan_jewelry",
+        "quantity": 4
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "superconductor_wafers",
+        "quantity": 1
+      },
+      {
+        "good": "optical_arrays",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  },
+  {
+    "id": "construction_yard",
+    "name": "Construction Yard",
+    "tier": 1,
+    "category": "manufacturing",
+    "inputs": [],
+    "outputs": [
+      {
+        "good": "construction",
+        "quantity": 7
+      }
+    ],
+    "build_cost": [
+      {
+        "good": "duranium_plate",
+        "quantity": 1
+      },
+      {
+        "good": "wiring_looms",
+        "quantity": 1
+      },
+      {
+        "good": "structural_frames",
+        "quantity": 1
+      },
+      {
+        "good": "construction",
+        "quantity": 1
+      }
+    ],
+    "production_cycle": 1
+  }
+]
